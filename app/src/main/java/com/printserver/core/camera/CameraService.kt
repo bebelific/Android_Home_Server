@@ -28,7 +28,7 @@ class CameraService(
     val bus = FrameBus()
     val streamer = CameraStreamer(bus)
     private var server: MjpegServer? = null
-    private var retryJob: Job? = null
+    private var monitorJob: Job? = null
 
     override suspend fun start(context: Context): Result<Unit> {
         _state.value = ServiceState.STARTING
@@ -36,7 +36,7 @@ class CameraService(
             applyPrefsToStreamer()
             server = MjpegServer({ prefs.mjpegPort.value }, bus, streamer)
             server?.start()
-            openCameraOrScheduleRetry()
+            startMonitor()
             _state.value = ServiceState.RUNNING
             PrinterLog.i(TAG, "Running on port ${prefs.mjpegPort.value}")
             Result.success(Unit)
@@ -56,27 +56,36 @@ class CameraService(
         streamer.fpsCap = prefs.mjpegFps.value
     }
 
-    private fun openCameraOrScheduleRetry() {
-        try {
-            streamer.start()
-            PrinterLog.i(TAG, "Camera active ${streamer.resolution}")
-        } catch (e: Exception) {
-            PrinterLog.w(TAG, "Camera unavailable (${e.message}); retrying every 10s")
-            scheduleCameraRetry()
-        }
-    }
-
-    private fun scheduleCameraRetry() {
-        if (retryJob?.isActive == true) return
-        retryJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive && _state.value == ServiceState.RUNNING && !streamer.isRunning) {
-                kotlinx.coroutines.delay(10_000)
-                if (_state.value != ServiceState.RUNNING || streamer.isRunning) break
-                applyPrefsToStreamer()
-                try {
-                    streamer.start()
-                    PrinterLog.i(TAG, "Camera recovered ${streamer.resolution}")
-                } catch (_: Exception) {}
+    private fun startMonitor() {
+        if (monitorJob?.isActive == true) return
+        monitorJob = CoroutineScope(Dispatchers.IO).launch {
+            var lastFrames = -1L
+            var stalls = 0
+            while (isActive && _state.value == ServiceState.RUNNING) {
+                delay(10_000)
+                if (_state.value != ServiceState.RUNNING) break
+                val frames = bus.frameCount
+                if (!streamer.isRunning) {
+                    stalls = 0
+                    applyPrefsToStreamer()
+                    try {
+                        streamer.start()
+                        PrinterLog.i(TAG, "Camera attached ${streamer.resolution}")
+                    } catch (_: Exception) {}
+                } else if (frames == lastFrames) {
+                    stalls++
+                    PrinterLog.w(TAG, "Frame stall ($stalls) at $frames frames")
+                    if (stalls >= 2) {
+                        stalls = 0
+                        PrinterLog.i(TAG, "Restarting stalled camera")
+                        streamer.stop()
+                        applyPrefsToStreamer()
+                        try { streamer.start() } catch (_: Exception) {}
+                    }
+                } else {
+                    stalls = 0
+                }
+                lastFrames = frames
             }
         }
     }
@@ -84,7 +93,7 @@ class CameraService(
     override suspend fun stop(): Result<Unit> {
         _state.value = ServiceState.STOPPING
         return try {
-            retryJob?.cancel(); retryJob = null
+            retryJobCancel()
             server?.stop(); server = null
             streamer.stop()
             _state.value = ServiceState.DISABLED
@@ -118,6 +127,8 @@ class CameraService(
         prefs.setCameraFacingBack(backFacing)
         streamer.switchCamera(backFacing)
     }
+
+    private fun retryJobCancel() { monitorJob?.cancel(); monitorJob = null }
 
     companion object { private const val TAG = "Webcam" }
 }
