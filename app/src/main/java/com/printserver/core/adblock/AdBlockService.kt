@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
@@ -29,6 +31,8 @@ class AdBlockService(
     @Volatile private var blockset: Set<String> = defaultBlocklist
     @Volatile private var server: DnsFilterServer? = null
     private lateinit var listFile: File
+    private var autoRefreshJob: kotlinx.coroutines.Job? = null
+    private var appContext: Context? = null
 
     @Volatile var actualPort: Int = 0
         private set
@@ -42,6 +46,7 @@ class AdBlockService(
     override suspend fun start(context: Context): Result<Unit> {
         _state.value = ServiceState.STARTING
         return try {
+            appContext = context.applicationContext
             listFile = File(context.filesDir, "adblock_hosts.txt")
             loadList()
             val want = prefs.adblockPort.value
@@ -68,7 +73,8 @@ class AdBlockService(
             }
             actualPort = attempt
             _state.value = ServiceState.RUNNING
-            PrinterLog.i(TAG, "Running on 0.0.0.0:$actualPort (degraded=$degraded, blocklist=${blockset.size})")
+            startAutoRefresh()
+            PrinterLog.i(TAG, "Running on 0.0.0.0:$actualPort (degraded=$degraded, blocklist=${blockset.size}, upstream=${prefs.dnsUpstream.value})")
             Result.success(Unit)
         } catch (e: Exception) {
             _state.value = ServiceState.ERROR
@@ -82,11 +88,35 @@ class AdBlockService(
         server = DnsFilterServer(
             { port },
             { blockset },
+            upstream = prefs.dnsUpstream.value,
             extraCheck = { client, domain ->
                 com.printserver.core.adblock.ParentalControl.evaluate(prefs, client, domain).blocked
             }
         )
         server?.start()
+    }
+
+    private fun startAutoRefresh() {
+        autoRefreshJob?.cancel()
+        val ctx = appContext ?: return
+        autoRefreshJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            while (isActive && _state.value == ServiceState.RUNNING) {
+                delay(60 * 60 * 1000L)
+                if (!prefs.adblockAutoRefresh.value) continue
+                val age = System.currentTimeMillis() - prefs.adblockLastList.value
+                if (age > 7L * 24 * 60 * 60 * 1000 && prefs.adblockLastList.value > 0) {
+                    PrinterLog.i(TAG, "Auto-refresh: blocklist older than 7 days")
+                    updateBlocklist(ctx)
+                }
+            }
+        }
+    }
+
+    fun restartFilter() {
+        val port = actualPort.takeIf { it > 0 } ?: prefs.adblockPort.value
+        runCatching { server?.stop() }
+        runCatching { bindServer(port) }
+        loadList()
     }
 
     fun pcBlockedCount(): Long = server?.pcBlocked?.get() ?: 0
@@ -113,16 +143,27 @@ class AdBlockService(
         _state.value == ServiceState.RUNNING && server?.running == true
 
     fun loadList() {
+        val base = mutableSetOf<String>()
         val f = listFile
         if (f.exists() && f.length() > 1024) {
-            blockset = f.readLines().asSequence()
+            f.readLines().asSequence()
                 .map { it.trim().lowercase() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") && !it.startsWith("!") }
                 .map { it.substringAfterLast('\t').substringAfter(' ') }
                 .toSet()
+                .let { base.addAll(it) }
         } else {
-            blockset = defaultBlocklist
+            base.addAll(defaultBlocklist)
         }
+        prefs.adblockCustomBlock.value.split(',', '\n', ';')
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .let { base.addAll(it) }
+        prefs.adblockAllow.value.split(',', '\n', ';')
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .forEach { allow -> base.removeAll { d -> d == allow || d.endsWith(".$allow") } }
+        blockset = base
     }
 
     suspend fun updateBlocklist(context: Context, url: String = DEFAULT_LIST_URL): Result<Int> =
@@ -142,6 +183,7 @@ class AdBlockService(
                 if (lines < 1000) throw IllegalStateException("download too small ($lines lines)")
                 tmp.renameTo(listFile) || (listFile.delete() && tmp.renameTo(listFile))
                 loadList()
+                prefs.setAdblockLastList(System.currentTimeMillis())
                 server?.stop(); server?.start()
                 lines
             }

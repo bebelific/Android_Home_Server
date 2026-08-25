@@ -25,7 +25,7 @@ class FilesActivity : ServiceBoundActivity() {
 
         findViewById<Button>(R.id.buttonOpenFiles).setOnClickListener {
             val prefs = PreferencesManager(this)
-            val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this) ?: return@setOnClickListener
+            val ip = com.printserver.core.discovery.DiscoveryService.localIp(this) ?: return@setOnClickListener
             runCatching {
                 startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("http://$ip:${prefs.webdavPort.value}/")))
             }
@@ -40,7 +40,7 @@ class FilesActivity : ServiceBoundActivity() {
     private fun refresh() {
         val fs = files()
         val prefs = PreferencesManager(this)
-        val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this) ?: "<phone-ip>"
+        val ip = com.printserver.core.discovery.DiscoveryService.localIp(this) ?: "<phone-ip>"
         textStatus.text = buildString {
             append("Service: ${fs?.state?.value?.name?.lowercase() ?: "unavailable"}\n")
             append("WebDAV/HTTP: http://$ip:${prefs.webdavPort.value}/\n")
@@ -66,7 +66,7 @@ class FilesActivity : ServiceBoundActivity() {
 
     private fun shareUrls() {
         val prefs = PreferencesManager(this)
-        val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this) ?: return
+        val ip = com.printserver.core.discovery.DiscoveryService.localIp(this) ?: return
         val text = "WebDAV: http://$ip:${prefs.webdavPort.value}/\nFTP: ftp://$ip:${prefs.ftpPort.value}/"
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text)

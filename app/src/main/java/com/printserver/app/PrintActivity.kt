@@ -6,6 +6,9 @@ import android.os.Looper
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.printserver.core.common.PreferencesManager
 import com.printserver.core.common.ServiceState
 
@@ -30,6 +33,19 @@ class PrintActivity : ServiceBoundActivity() {
         buttonUsb = findViewById(R.id.buttonUsbPerm)
         buttonUsb.setOnClickListener {
             print()?.requestUsbPermission { runOnUiThread { refresh() } }
+        }
+        findViewById<Button>(R.id.buttonReprint).setOnClickListener {
+            val b = android.widget.Toast.makeText(this, "Sending...", android.widget.Toast.LENGTH_SHORT)
+            b.show()
+            lifecycleScope.launch {
+                val r = print()?.reprintLast()
+                android.widget.Toast.makeText(
+                    this@PrintActivity,
+                    r?.fold({ it }, { "Failed: ${it.message}" }) ?: "Service unavailable",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                refresh()
+            }
         }
     }
 

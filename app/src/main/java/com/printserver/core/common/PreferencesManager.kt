@@ -41,6 +41,14 @@ object PrefKeys {
     const val SAVER_SPEED = "saver_speed"
     const val DARK_MODE = "dark_mode"
     const val EMERGENCY_STOPPED = "emergency_stopped"
+    const val DNS_UPSTREAM = "dns_upstream"
+    const val ADBLOCK_AUTO_REFRESH = "adblock_auto_refresh"
+    const val ADBLOCK_LAST_LIST = "adblock_last_list"
+    const val ADBLOCK_CUSTOM_BLOCK = "adblock_custom_block"
+    const val ADBLOCK_ALLOW = "adblock_allow"
+    const val MOTION_ENABLED = "motion_enabled"
+    const val MOTION_SAVE = "motion_save"
+    const val BACKUP_SOURCE_URI = "backup_source_uri"
     const val PC_ENABLED = "pc_enabled"
     const val PC_DEVICES = "pc_devices"
     const val PC_BLOCK_ADULT = "pc_block_adult"
@@ -94,6 +102,14 @@ class PreferencesManager(context: Context) {
     private val _saverSpeed = MutableStateFlow(prefs.getInt(PrefKeys.SAVER_SPEED, 1))
     private val _darkMode = MutableStateFlow(prefs.getBoolean(PrefKeys.DARK_MODE, true))
     private val _emergencyStopped = MutableStateFlow(prefs.getBoolean(PrefKeys.EMERGENCY_STOPPED, false))
+    private val _dnsUpstream = MutableStateFlow(prefs.getString(PrefKeys.DNS_UPSTREAM, "8.8.8.8") ?: "8.8.8.8")
+    private val _adblockAutoRefresh = MutableStateFlow(prefs.getBoolean(PrefKeys.ADBLOCK_AUTO_REFRESH, true))
+    private val _adblockLastList = MutableStateFlow(prefs.getLong(PrefKeys.ADBLOCK_LAST_LIST, 0L))
+    private val _adblockCustomBlock = MutableStateFlow(prefs.getString(PrefKeys.ADBLOCK_CUSTOM_BLOCK, "") ?: "")
+    private val _adblockAllow = MutableStateFlow(prefs.getString(PrefKeys.ADBLOCK_ALLOW, "") ?: "")
+    private val _motionEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.MOTION_ENABLED, false))
+    private val _motionSave = MutableStateFlow(prefs.getBoolean(PrefKeys.MOTION_SAVE, false))
+    private val _backupSourceUri = MutableStateFlow(prefs.getString(PrefKeys.BACKUP_SOURCE_URI, "") ?: "")
     private val _pcEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_ENABLED, false))
     private val _pcDevices = MutableStateFlow(prefs.getString(PrefKeys.PC_DEVICES, "") ?: "")
     private val _pcBlockAdult = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_BLOCK_ADULT, true))
@@ -142,6 +158,14 @@ class PreferencesManager(context: Context) {
     val saverSpeed: StateFlow<Int> = _saverSpeed.asStateFlow()
     val darkMode: StateFlow<Boolean> = _darkMode.asStateFlow()
     val emergencyStopped: StateFlow<Boolean> = _emergencyStopped.asStateFlow()
+    val dnsUpstream: StateFlow<String> = _dnsUpstream.asStateFlow()
+    val adblockAutoRefresh: StateFlow<Boolean> = _adblockAutoRefresh.asStateFlow()
+    val adblockLastList: StateFlow<Long> = _adblockLastList.asStateFlow()
+    val adblockCustomBlock: StateFlow<String> = _adblockCustomBlock.asStateFlow()
+    val adblockAllow: StateFlow<String> = _adblockAllow.asStateFlow()
+    val motionEnabled: StateFlow<Boolean> = _motionEnabled.asStateFlow()
+    val motionSave: StateFlow<Boolean> = _motionSave.asStateFlow()
+    val backupSourceUri: StateFlow<String> = _backupSourceUri.asStateFlow()
     val pcEnabled: StateFlow<Boolean> = _pcEnabled.asStateFlow()
     val pcDevices: StateFlow<String> = _pcDevices.asStateFlow()
     val pcBlockAdult: StateFlow<Boolean> = _pcBlockAdult.asStateFlow()
@@ -194,6 +218,14 @@ class PreferencesManager(context: Context) {
     fun setSaverSpeed(v: Int) { val c = v.coerceIn(0, 2); prefs.edit().putInt(PrefKeys.SAVER_SPEED, c).apply(); _saverSpeed.value = c }
     fun setDarkMode(v: Boolean) { prefs.edit().putBoolean(PrefKeys.DARK_MODE, v).apply(); _darkMode.value = v }
     fun setEmergencyStopped(v: Boolean) { prefs.edit().putBoolean(PrefKeys.EMERGENCY_STOPPED, v).apply(); _emergencyStopped.value = v }
+    fun setDnsUpstream(v: String) { val s = v.trim().ifBlank { "8.8.8.8" }; prefs.edit().putString(PrefKeys.DNS_UPSTREAM, s).apply(); _dnsUpstream.value = s }
+    fun setAdblockAutoRefresh(v: Boolean) { prefs.edit().putBoolean(PrefKeys.ADBLOCK_AUTO_REFRESH, v).apply(); _adblockAutoRefresh.value = v }
+    fun setAdblockLastList(v: Long) { prefs.edit().putLong(PrefKeys.ADBLOCK_LAST_LIST, v).apply(); _adblockLastList.value = v }
+    fun setAdblockCustomBlock(v: String) { prefs.edit().putString(PrefKeys.ADBLOCK_CUSTOM_BLOCK, v).apply(); _adblockCustomBlock.value = v }
+    fun setAdblockAllow(v: String) { prefs.edit().putString(PrefKeys.ADBLOCK_ALLOW, v).apply(); _adblockAllow.value = v }
+    fun setMotionEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.MOTION_ENABLED, v).apply(); _motionEnabled.value = v }
+    fun setMotionSave(v: Boolean) { prefs.edit().putBoolean(PrefKeys.MOTION_SAVE, v).apply(); _motionSave.value = v }
+    fun setBackupSourceUri(v: String) { prefs.edit().putString(PrefKeys.BACKUP_SOURCE_URI, v).apply(); _backupSourceUri.value = v }
     fun setPcEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_ENABLED, v).apply(); _pcEnabled.value = v }
     fun setPcDevices(v: String) { prefs.edit().putString(PrefKeys.PC_DEVICES, v).apply(); _pcDevices.value = v }
     fun setPcBlockAdult(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_BLOCK_ADULT, v).apply(); _pcBlockAdult.value = v }

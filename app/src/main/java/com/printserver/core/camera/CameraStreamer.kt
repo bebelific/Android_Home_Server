@@ -2,11 +2,13 @@ package com.printserver.core.camera
 
 import android.graphics.ImageFormat
 import android.graphics.Rect
+import android.graphics.Color
 import android.graphics.YuvImage
 import android.hardware.Camera
 import android.view.SurfaceHolder
 import com.printserver.core.common.PrinterLog
 import java.io.ByteArrayOutputStream
+import kotlin.math.abs
 
 class CameraStreamer(private val bus: FrameBus) {
     @Volatile private var camera: Camera? = null
@@ -21,6 +23,15 @@ class CameraStreamer(private val bus: FrameBus) {
     @Volatile var torchRequested: Boolean = false
     @Volatile var rotationDegrees: Int = 0
         private set
+    @Volatile var motionEnabled: Boolean = false
+    @Volatile var motionSave: Boolean = false
+    var onMotionSnapshot: ((ByteArray) -> Unit)? = null
+    @Volatile var motionCount: Long = 0
+        private set
+    @Volatile var lastMotionMs: Long = 0
+        private set
+    private var prevLuma: IntArray? = null
+    private var lastMotionNs = 0L
 
     val isRunning: Boolean get() = camera != null
     val resolution: String get() = if (width > 0) "${width}x${height}" else "-"
@@ -113,7 +124,36 @@ class CameraStreamer(private val bus: FrameBus) {
         val yuv = YuvImage(frame, ImageFormat.NV21, fw, fh, null)
         val out = ByteArrayOutputStream(frame.size / 2)
         yuv.compressToJpeg(Rect(0, 0, fw, fh), jpegQuality.coerceIn(30, 95), out)
-        bus.publish(out.toByteArray())
+        val jpeg = out.toByteArray()
+        if (motionEnabled) detectMotion(jpeg, fw, fh)
+        bus.publish(jpeg)
+    }
+
+    private fun detectMotion(jpeg: ByteArray, w: Int, h: Int) {
+        if (System.nanoTime() - lastMotionNs < 60_000_000_000L) return
+        val bmp = android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return
+        val small = android.graphics.Bitmap.createScaledBitmap(bmp, 32, 24, true)
+        val px = IntArray(32 * 24)
+        small.getPixels(px, 0, 32, 0, 0, 32, 24)
+        if (small !== bmp) small.recycle()
+        bmp.recycle()
+        val luma = IntArray(px.size) { i ->
+            val p = px[i]
+            (Color.red(p) * 299 + Color.green(p) * 587 + Color.blue(p) * 114) / 1000
+        }
+        val prev = prevLuma
+        prevLuma = luma
+        if (prev == null || prev.size != luma.size) return
+        var diff = 0L
+        for (i in luma.indices) diff += abs(luma[i] - prev[i])
+        val mean = diff / luma.size
+        if (mean > 18) {
+            motionCount++
+            lastMotionMs = System.currentTimeMillis()
+            lastMotionNs = System.nanoTime()
+            PrinterLog.i(TAG, "Motion detected (diff=$mean)")
+            if (motionSave) onMotionSnapshot?.invoke(jpeg)
+        }
     }
 
     private fun rotateNv21(src: ByteArray, w: Int, h: Int, deg: Int): Triple<ByteArray, Int, Int> {
@@ -193,5 +233,6 @@ class CameraStreamer(private val bus: FrameBus) {
         private const val TAG = "CamStreamer"
         private const val MAX_WIDTH = 1280
         private const val MAX_HEIGHT = 720
+        private const val MOTION_TAG = "Motion"
     }
 }

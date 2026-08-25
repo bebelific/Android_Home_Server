@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0E1116">
+    android:background="#14100C">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -20,7 +20,7 @@
                     android:text="@string/app_name"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="#E6E9EE"/>
+                    android:textColor="#EFE7DC"/>
 
             <TextView
                 android:id="@+id/textStatus"
@@ -34,7 +34,7 @@
                 android:paddingBottom="6dp"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="#9AA3AF"/>
+                android:textColor="#A89A8A"/>
 
             <TextView
                 android:id="@+id/textNetwork"
@@ -42,7 +42,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="13sp"
-                android:textColor="#9AA3AF"/>
+                android:textColor="#A89A8A"/>
 
             <TextView
                 android:id="@+id/textAddresses"
@@ -51,7 +51,7 @@
                 android:layout_marginTop="2dp"
                 android:textIsSelectable="true"
                 android:textSize="12sp"
-                android:textColor="#9AA3AF"/>
+                android:textColor="#A89A8A"/>
 
             <Button
                 android:id="@+id/buttonUsb"
@@ -73,14 +73,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginVertical="12dp"
-                android:background="#232A33"/>
+                android:background="#2E2620"/>
 
             <TextView
                 android:id="@+id/textPower"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
-                android:textColor="#9AA3AF"/>
+                android:textColor="#A89A8A"/>
 
             <TextView
                 android:id="@+id/textUptime"
@@ -88,7 +88,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textSize="12sp"
-                android:textColor="#9AA3AF"/>
+                android:textColor="#A89A8A"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -147,7 +147,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:textColor="#FF5370"
+                android:textColor="#E06A5A"
                 android:visibility="gone"/>
 
             <TextView

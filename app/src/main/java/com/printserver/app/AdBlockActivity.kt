@@ -2,6 +2,8 @@ package com.printserver.app
 
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
@@ -21,6 +23,7 @@ class AdBlockActivity : ServiceBoundActivity() {
         setContentView(R.layout.activity_adblock)
         title = getString(R.string.title_adblock)
         text = findViewById(R.id.textAdblock)
+        val prefs = com.printserver.core.common.PreferencesManager(this)
         findViewById<Button>(R.id.buttonUpdateList).setOnClickListener {
             val svc = adblockSvc()
             if (svc == null) Toast.makeText(this, "Enable Ad Block first", Toast.LENGTH_SHORT).show()
@@ -37,6 +40,39 @@ class AdBlockActivity : ServiceBoundActivity() {
                 }
             }
         }
+
+        val etUp = findViewById<EditText>(R.id.etUpstream)
+        etUp.setText(prefs.dnsUpstream.value)
+        findViewById<Button>(R.id.buttonApplyUpstream).setOnClickListener {
+            prefs.setDnsUpstream(etUp.text.toString())
+            adblockSvc()?.restartFilter()
+            Toast.makeText(this, "Upstream applied", Toast.LENGTH_SHORT).show()
+            refresh()
+        }
+        val swAuto = findViewById<Switch>(R.id.swAutoRefresh)
+        swAuto.isChecked = prefs.adblockAutoRefresh.value
+        swAuto.setOnCheckedChangeListener { _, c -> prefs.setAdblockAutoRefresh(c) }
+
+        val etBlock = findViewById<EditText>(R.id.etCustomBlock)
+        findViewById<Button>(R.id.buttonAddBlock).setOnClickListener {
+            val d = etBlock.text.toString().trim().lowercase()
+            if (d.isNotEmpty()) {
+                prefs.setAdblockCustomBlock(prefs.adblockCustomBlock.value + "," + d)
+                adblockSvc()?.loadList()
+                etBlock.text.clear()
+                refresh()
+            }
+        }
+        val etAllow = findViewById<EditText>(R.id.etAllow)
+        findViewById<Button>(R.id.buttonAddAllow).setOnClickListener {
+            val d = etAllow.text.toString().trim().lowercase()
+            if (d.isNotEmpty()) {
+                prefs.setAdblockAllow(prefs.adblockAllow.value + "," + d)
+                adblockSvc()?.loadList()
+                etAllow.text.clear()
+                refresh()
+            }
+        }
     }
 
     private fun adblockSvc(): AdBlockService? =
@@ -48,7 +84,7 @@ class AdBlockActivity : ServiceBoundActivity() {
     private fun refresh() {
         val svc = adblockSvc()
         val prefs = com.printserver.core.common.PreferencesManager(this)
-        val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this) ?: "<phone-ip>"
+        val ip = com.printserver.core.discovery.DiscoveryService.localIp(this) ?: "<phone-ip>"
         val stats = svc?.stats()
         val port = svc?.actualPort?.takeIf { it > 0 } ?: prefs.adblockPort.value
         text.text = buildString {
@@ -63,6 +99,7 @@ class AdBlockActivity : ServiceBoundActivity() {
                 if (recent.isNotEmpty()) append("Recent blocks:\n" + recent.take(8).joinToString("\n") { "  ✕ $it" } + "\n")
             }
             append("\nUSE IT (Pi-hole style):\n")
+            append("\nCustom: ${prefs.adblockCustomBlock.value.split(',').count { it.isNotBlank() }} blocked · ${prefs.adblockAllow.value.split(',').count { it.isNotBlank() }} allowed")
             if (port == 53) {
                 append("  1. Router: set DHCP DNS server to $ip\n")
                 append("     (every device on your Wi-Fi is then protected)\n")

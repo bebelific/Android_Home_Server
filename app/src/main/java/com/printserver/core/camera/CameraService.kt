@@ -59,6 +59,22 @@ class CameraService(
         streamer.torchRequested = prefs.cameraTorch.value
         streamer.jpegQuality = prefs.mjpegQuality.value
         streamer.fpsCap = prefs.mjpegFps.value
+        streamer.motionEnabled = prefs.motionEnabled.value
+        streamer.motionSave = prefs.motionSave.value
+        streamer.onMotionSnapshot = { jpeg ->
+            if (prefs.motionSave.value) {
+                runCatching {
+                    val root = com.printserver.core.files.StorageProvider.resolveRoot(appContext, prefs.shareRoot.value)
+                    val dir = java.io.File(root, "Motion")
+                    dir.mkdirs()
+                    val f = java.io.File(dir, "motion-%d.jpg".format(System.currentTimeMillis()))
+                    f.writeBytes(jpeg)
+                    val files = dir.listFiles()
+                    if (files != null && files.size > 50) files.minByOrNull { it.name }?.delete()
+                    PrinterLog.i("Motion", "Saved ${f.name}")
+                }
+            }
+        }
     }
 
     private fun startMonitor() {

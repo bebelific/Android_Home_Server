@@ -109,4 +109,23 @@ class PrintService(
 
     fun jobSnapshot(): Pair<com.printserver.core.print.PrintJob?, List<com.printserver.core.print.PrintJob>> =
         (queue?.active()) to (queue?.recent().orEmpty().take(6))
+
+    suspend fun reprintLast(): Result<String> {
+        val pipeline = pipeline ?: return Result.failure(IllegalStateException("service not running"))
+        if (!pipeline.acceptsWork) return Result.failure(IllegalStateException("printer busy"))
+        val dir = java.io.File(
+            com.printserver.core.files.StorageProvider.resolveRoot(context, prefs.shareRoot.value),
+            "PrintJobs"
+        )
+        val last = dir.listFiles()?.maxByOrNull { it.name }
+            ?: return Result.failure(IllegalStateException("no archived jobs — enable 'Archive print jobs' and print once"))
+        usb.findPrinter()?.let { usb.openPrinter(it) }?.close()
+            ?: return Result.failure(IllegalStateException("printer not attached/permitted"))
+        return runCatching {
+            java.io.FileInputStream(last).use { ins ->
+                pipeline.run(ins, ConnectionMeta("reprint:${last.name}", System.currentTimeMillis()))
+            }
+            "Reprinted ${last.name}"
+        }
+    }
 }

@@ -20,7 +20,7 @@ class DiscoveryActivity : ServiceBoundActivity() {
 
     private fun refresh() {
         val prefs = PreferencesManager(this)
-        val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this) ?: "<no Wi-Fi>"
+        val ip = com.printserver.core.discovery.DiscoveryService.localIp(this) ?: "<no Wi-Fi>"
         val svc = { id: String ->
             server?.services()?.get(id)?.state?.value == ServiceState.RUNNING
         }

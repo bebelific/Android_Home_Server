@@ -18,9 +18,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class WebcamActivity : ServiceBoundActivity() {
 
+    private lateinit var prefs: PreferencesManager
     private lateinit var preview: ImageView
     private lateinit var previewHint: TextView
     private lateinit var textStatus: TextView
@@ -31,6 +35,8 @@ class WebcamActivity : ServiceBoundActivity() {
     private lateinit var sbQuality: SeekBar
     private lateinit var tvFps: TextView
     private lateinit var tvQuality: TextView
+    private lateinit var swMotion: Switch
+    private lateinit var swMotionSave: Switch
 
     private val handler = Handler(Looper.getMainLooper())
     private val statusTick = object : Runnable {
@@ -53,7 +59,7 @@ class WebcamActivity : ServiceBoundActivity() {
         tvFps = findViewById(R.id.tvFps)
         tvQuality = findViewById(R.id.tvQuality)
 
-        val prefs = PreferencesManager(this)
+        prefs = PreferencesManager(this)
 
         sbFps.max = 25
         sbFps.progress = prefs.mjpegFps.value - 5
@@ -92,7 +98,14 @@ class WebcamActivity : ServiceBoundActivity() {
         handler.post(statusTick)
     }
 
-    private fun DiscoveryServiceIp() = com.printserver.core.discovery.DiscoveryService.localWifiIp(this)
+    private fun applyMotionFlags() {
+        camera()?.let { cam ->
+            cam.streamer.motionEnabled = prefs.motionEnabled.value
+            cam.streamer.motionSave = prefs.motionSave.value
+        }
+    }
+
+    private fun DiscoveryServiceIp() = com.printserver.core.discovery.DiscoveryService.localIp(this)
 
     private fun simple(onChange: (Int) -> Unit): SeekBar.OnSeekBarChangeListener =
         object : SeekBar.OnSeekBarChangeListener {
@@ -173,6 +186,8 @@ class WebcamActivity : ServiceBoundActivity() {
         textUsage.text = buildString {
             append("Viewers: ${cam.bus.subscriberCount}/8 (this page counts as one)\n")
             append("Frames served: ${cam.bus.frameCount}\n")
+            if (prefs.motionEnabled.value)
+                append("Motion: ${cam.streamer.motionCount} events${if (cam.streamer.lastMotionMs > 0) " · last ${SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(cam.streamer.lastMotionMs))}" else ""}\n")
             val ip = DiscoveryServiceIp() ?: "<phone-ip>"
             append("Viewer (any browser): http://$ip:${prefs.mjpegPort.value}/view\n")
             append("Stream (VLC etc.): http://$ip:${prefs.mjpegPort.value}/stream\n")

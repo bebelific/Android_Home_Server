@@ -64,14 +64,32 @@ class DiscoveryService(
 
     companion object {
         private const val TAG = "Discovery"
-        fun localWifiIp(context: Context): String? = try {
+
+        data class NetIface(val name: String, val ip: String, val isEthernet: Boolean)
+
+        fun localInterfaces(context: Context? = null): List<NetIface> = try {
             java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces()).asSequence()
                 .filter { it.isUp && !it.isLoopback }
-                .flatMap { java.util.Collections.list(it.inetAddresses).asSequence() }
-                .filterIsInstance<java.net.Inet4Address>()
-                .filter { !it.isLoopbackAddress && it.isSiteLocalAddress }
-                .mapNotNull { it.hostAddress }
-                .firstOrNull()
-        } catch (_: Exception) { null }
+                .flatMap { ni ->
+                    java.util.Collections.list(ni.inetAddresses).asSequence()
+                        .filterIsInstance<java.net.Inet4Address>()
+                        .filter { !it.isLoopbackAddress && it.isSiteLocalAddress }
+                        .map { NetIface(ni.name, it.hostAddress ?: "", isEthernetIface(ni.name)) }
+                }
+                .filter { it.ip.isNotEmpty() }
+                .toList()
+        } catch (_: Exception) { emptyList() }
+
+        fun isEthernetIface(name: String): Boolean {
+            val n = name.lowercase()
+            return n.startsWith("eth") || n.startsWith("usb") || n.startsWith("rndis") ||
+                n.contains("ax88179") || n.contains("rtl815")
+        }
+
+        fun localWifiIp(context: Context? = null): String? =
+            localInterfaces(context).firstOrNull { !it.isEthernet }?.ip
+            ?: localInterfaces(context).firstOrNull()?.ip
+
+        fun localIp(context: Context? = null): String? = localInterfaces(context).firstOrNull()?.ip
     }
 }

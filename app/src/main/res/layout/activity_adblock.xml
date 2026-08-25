@@ -27,6 +27,87 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="UPSTREAM + AUTO-REFRESH"
+            android:textStyle="bold"/>
+
+        <EditText
+            android:id="@+id/etUpstream"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Upstream DNS (e.g. 1.1.1.1)"
+            android:inputType="text"
+            android:textSize="14sp"/>
+
+        <Button
+            android:id="@+id/buttonApplyUpstream"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Apply upstream (restarts filter)"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Auto-refresh blocklist weekly"/>
+            <Switch
+                android:id="@+id/swAutoRefresh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="CUSTOM BLOCK / ALLOW"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"/>
+
+        <EditText
+            android:id="@+id/etCustomBlock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Block domain (e.g. ads.example.com)"
+            android:inputType="text"
+            android:textSize="14sp"/>
+
+        <Button
+            android:id="@+id/buttonAddBlock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add to blocklist"/>
+
+        <EditText
+            android:id="@+id/etAllow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Always-allow domain (whitelist)"
+            android:inputType="text"
+            android:textSize="14sp"/>
+
+        <Button
+            android:id="@+id/buttonAddAllow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add to whitelist"/>
+
+        <TextView
+            android:id="@+id/textCustomLists"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textSize="11sp"
+            android:fontFamily="monospace"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="HOW TO USE"
             android:textStyle="bold"/>

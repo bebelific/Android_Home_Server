@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.App" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:colorBackground">#0E1116</item>
-        <item name="colorSurface">#171C24</item>
-        <item name="colorPrimary">#4CAF93</item>
-        <item name="colorOnPrimary">#06231C</item>
-        <item name="android:statusBarColor">#0E1116</item>
-        <item name="android:navigationBarColor">#0E1116</item>
-        <item name="android:textColorPrimary">#E6E9EE</item>
-        <item name="android:textColorSecondary">#9AA3AF</item>
+        <item name="android:colorBackground">#14100C</item>
+        <item name="colorSurface">#1E1812</item>
+        <item name="colorPrimary">#C8A882</item>
+        <item name="colorOnPrimary">#2B1D10</item>
+        <item name="android:statusBarColor">#14100C</item>
+        <item name="android:navigationBarColor">#14100C</item>
+        <item name="android:textColorPrimary">#EFE7DC</item>
+        <item name="android:textColorSecondary">#A89A8A</item>
     </style>
 
     <style name="Theme.App.Light" parent="Theme.Material3.Light.NoActionBar">
-        <item name="android:colorBackground">#F6F7F9</item>
-        <item name="colorSurface">#FFFFFF</item>
-        <item name="colorPrimary">#2E7D5B</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="android:statusBarColor">#E9EDF1</item>
-        <item name="android:navigationBarColor">#E9EDF1</item>
-        <item name="android:textColorPrimary">#1B2027</item>
-        <item name="android:textColorSecondary">#5B6673</item>
+        <item name="android:colorBackground">#F5EFE6</item>
+        <item name="colorSurface">#FFFDF8</item>
+        <item name="colorPrimary">#A97C50</item>
+        <item name="colorOnPrimary">#FFF8EE</item>
+        <item name="android:statusBarColor">#EDE4D7</item>
+        <item name="android:navigationBarColor">#EDE4D7</item>
+        <item name="android:textColorPrimary">#2B1D10</item>
+        <item name="android:textColorSecondary">#7A6A56</item>
     </style>
 </resources>

@@ -31,6 +31,13 @@
             android:visibility="gone"
             android:text="Grant USB printer permission"/>
 
+        <Button
+            android:id="@+id/buttonReprint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Reprint last job (from archive)"/>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

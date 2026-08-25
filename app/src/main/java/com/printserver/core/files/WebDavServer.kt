@@ -52,6 +52,8 @@ class WebDavServer(
                 NanoHTTPD.Method.POST -> post(rel, session)
                 NanoHTTPD.Method.DELETE -> delete(rel)
                 NanoHTTPD.Method.MKCOL -> mkcol(rel)
+                NanoHTTPD.Method.MOVE -> move(rel, session)
+                NanoHTTPD.Method.COPY -> copy(rel, session)
                 else -> plain(NanoHTTPD.Response.Status.METHOD_NOT_ALLOWED, "unsupported")
             }
         } catch (e: Exception) {
@@ -75,7 +77,7 @@ class WebDavServer(
 
     private fun options(): NanoHTTPD.Response =
         plain(NanoHTTPD.Response.Status.OK, "").apply {
-            addHeader("Allow", "OPTIONS, GET, HEAD, PUT, POST, DELETE, MKCOL, PROPFIND")
+            addHeader("Allow", "OPTIONS, GET, HEAD, PUT, POST, DELETE, MKCOL, PROPFIND, MOVE, COPY")
             addHeader("DAV", "1")
         }
 
@@ -147,6 +149,38 @@ class WebDavServer(
         override fun close() { src.close() }
     }
 
+    private fun move(rel: String, session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response =
+        transfer(rel, session, deleteSource = true)
+
+    private fun copy(rel: String, session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response =
+        transfer(rel, session, deleteSource = false)
+
+    private fun transfer(rel: String, session: NanoHTTPD.IHTTPSession, deleteSource: Boolean): NanoHTTPD.Response {
+        val destHeader = session.headers["destination"]
+            ?: return plain(NanoHTTPD.Response.Status.BAD_REQUEST, "no Destination header")
+        val destRel = try {
+            java.net.URI(destHeader).path?.removePrefix("/") ?: destHeader.removePrefix("/")
+        } catch (_: Exception) {
+            destHeader.removePrefix("/").substringAfterLast("/")
+        }
+        if (destRel.isBlank()) return plain(NanoHTTPD.Response.Status.BAD_REQUEST, "bad destination")
+        val src = target(rel)
+        if (!src.exists()) return plain(NanoHTTPD.Response.Status.NOT_FOUND, "not found")
+        val dst = target(destRel)
+        val overwrite = (session.headers["overwrite"] ?: "T").equals("T", true)
+        if (dst.exists() && !overwrite) return plain(NanoHTTPD.Response.Status.PRECONDITION_FAILED, "destination exists")
+        dst.parentFile?.mkdirs()
+        if (dst.exists()) dst.deleteRecursively()
+        val ok = if (deleteSource) {
+            src.renameTo(dst) || runCatching { src.copyRecursively(dst, overwrite = true); src.deleteRecursively() }.isSuccess
+        } else {
+            runCatching { src.copyRecursively(dst, overwrite = true) }.isSuccess
+        }
+        PrinterLog.i(TAG, "${if (deleteSource) "MOVE" else "COPY"} /$rel -> /$destRel ok=$ok")
+        return if (ok) plain(NanoHTTPD.Response.Status.CREATED, "moved")
+        else plain(NanoHTTPD.Response.Status.FORBIDDEN, "transfer failed")
+    }
+
     private fun head(rel: String): NanoHTTPD.Response {
         val f = target(rel)
         if (!f.exists()) return plain(NanoHTTPD.Response.Status.NOT_FOUND, "")
@@ -197,7 +231,14 @@ class WebDavServer(
                 }
                 PrinterLog.i(TAG, "POST /$rel uploaded $count file(s)")
             }
-            else -> if (flag.startsWith("del:")) {
+            else -> if (flag.startsWith("rename:")) {
+                val oldName = flag.removePrefix("rename:")
+                val newName = sanitizeName(session.parms["newname"] ?: "")
+                if (newName.isNotBlank()) {
+                    val rc = File(dir, sanitizeName(oldName)).renameTo(File(dir, newName))
+                    PrinterLog.i(TAG, "RENAME /$rel: $oldName -> $newName ok=$rc")
+                }
+            } else if (flag.startsWith("del:")) {
                 File(dir, sanitizeName(flag.removePrefix("del:"))).deleteRecursively()
                 PrinterLog.w(TAG, "DELETE inside /$rel")
             }
@@ -266,6 +307,7 @@ class WebDavServer(
                 sb.append("<tr><td><a href='").append(href).append("/'>&#128193; ").append(StorageProvider.htmlEscape(e.name)).append("</a></td><td>-</td></tr>")
             } else {
                 sb.append("<tr><td><a href='").append(href).append("'>&#128196; ").append(StorageProvider.htmlEscape(e.name)).append("</a> ")
+                sb.append("<form style='display:inline' method='POST' action='$base'><input type='hidden' name='rootDir' value='rename:${StorageProvider.htmlEscape(e.name)}'/><input type='text' name='newname' placeholder='new name' style='width:90px'/><button type='submit'>ren</button></form> ")
                 sb.append("<form style='display:inline' method='POST' action='$base'><input type='hidden' name='rootDir' value='del:${StorageProvider.htmlEscape(e.name)}'/><button type='submit'>x</button></form></td>")
                 sb.append("<td>").append(StorageProvider.humanSize(e.length())).append("</td></tr>")
             }

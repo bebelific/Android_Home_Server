@@ -48,7 +48,7 @@ class MediaActivity : ServiceBoundActivity() {
         }
         lifecycleScope.launch {
             val (videos, audios, skipped) = withContext(Dispatchers.IO) { index(root) }
-            val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this@MediaActivity) ?: "<phone-ip>"
+            val ip = com.printserver.core.discovery.DiscoveryService.localIp(this@MediaActivity) ?: "<phone-ip>"
             val port = prefs.webdavPort.value
             textSummary.text = buildString {
                 append("${videos.size} video(s), ${audios.size} audio file(s)")

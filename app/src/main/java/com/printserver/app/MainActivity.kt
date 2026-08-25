@@ -350,22 +350,35 @@ class MainActivity : AppCompatActivity() {
         }
         textStatus.setTextColor(
             when {
-                running == total && total > 0 -> Color.parseColor("#4CAF93")
-                running > 0 -> Color.parseColor("#F5A623")
-                else -> Color.parseColor("#9AA3AF")
+                running == total && total > 0 -> Color.parseColor("#C8A882")
+                running > 0 -> Color.parseColor("#E0A458")
+                else -> Color.parseColor("#A89A8A")
             }
         )
 
-        val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this)
-        val ports = bound?.portSummary().orEmpty()
-        textNetwork.text = when {
-            !prefs.netWatchEnabled.value -> "Internet: not monitored (enable in Settings)"
-            InternetWatchdog.status == InternetWatchdog.Status.ONLINE -> "Internet: ONLINE"
-            InternetWatchdog.status == InternetWatchdog.Status.OFFLINE ->
-                "Internet: DOWN — tap the alert to share this phone's data via hotspot"
-            else -> "Internet: checking…"
+        val ports = bound?.portSummary() ?: ""
+        val ifaces = com.printserver.core.discovery.DiscoveryService.localInterfaces(this)
+        val ip = ifaces.firstOrNull()?.ip
+        val connType = when {
+            ifaces.isEmpty() -> "no network"
+            ifaces.any { it.isEthernet } && ifaces.any { !it.isEthernet } -> "ethernet + Wi-Fi"
+            ifaces.any { it.isEthernet } -> "ethernet"
+            else -> "Wi-Fi"
         }
-        textAddresses.text = (ip ?: "no Wi-Fi") + ports
+        textNetwork.text = when {
+            !prefs.netWatchEnabled.value -> "Internet: not monitored · $connType"
+            InternetWatchdog.status == InternetWatchdog.Status.ONLINE -> "Internet: ONLINE · $connType"
+            InternetWatchdog.status == InternetWatchdog.Status.OFFLINE ->
+                "Internet: DOWN · $connType — tap the alert to share mobile data"
+            else -> "Internet: checking… · $connType"
+        }
+        textAddresses.text = buildString {
+            append(ip ?: "no network")
+            append(ports)
+            for (iface in ifaces.drop(1)) {
+                append("\n${iface.ip} (${iface.name})")
+            }
+        }
 
         buttonUsb.visibility =
             if (bound?.printService()?.needsUsbPermission() == true) View.VISIBLE else View.GONE
@@ -420,7 +433,7 @@ class MainActivity : AppCompatActivity() {
         private val title = TextView(ctx).apply {
             textSize = 13f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setTextColor(if (prefs.darkMode.value) Color.parseColor("#E6E9EE") else Color.parseColor("#1B2027"))
+            setTextColor(if (prefs.darkMode.value) Color.parseColor("#EFE7DC") else Color.parseColor("#2B1D10"))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
@@ -436,11 +449,11 @@ class MainActivity : AppCompatActivity() {
         private val icon = ImageView(ctx).apply {
             val lp = LinearLayout.LayoutParams(dp(14), dp(14)).apply { marginEnd = dp(6) }
             layoutParams = lp
-            imageTintList = ColorStateList.valueOf(Color.parseColor("#5B6673"))
+            imageTintList = ColorStateList.valueOf(Color.parseColor("#7A6A56"))
         }
         private val sub = TextView(ctx).apply {
             textSize = 10f
-            setTextColor(Color.parseColor("#9AA3AF"))
+            setTextColor(Color.parseColor("#A89A8A"))
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -469,18 +482,18 @@ class MainActivity : AppCompatActivity() {
             sw.isChecked = state == ServiceState.RUNNING || state == ServiceState.STARTING
             suppressCallbacks = false
             val color = when (state) {
-                ServiceState.RUNNING -> Color.parseColor("#4CAF93")
-                ServiceState.STARTING, ServiceState.STOPPING -> Color.parseColor("#F5A623")
-                ServiceState.ERROR -> Color.parseColor("#FF5370")
-                else -> if (prefs.darkMode.value) Color.parseColor("#3A414B") else Color.parseColor("#C4CBD3")
+                ServiceState.RUNNING -> Color.parseColor("#C8A882")
+                ServiceState.STARTING, ServiceState.STOPPING -> Color.parseColor("#E0A458")
+                ServiceState.ERROR -> Color.parseColor("#E06A5A")
+                else -> if (prefs.darkMode.value) Color.parseColor("#4A3F30") else Color.parseColor("#D8CCBA")
             }
             dot.backgroundTintList = ColorStateList.valueOf(color)
             sub.setTextColor(
                 when (state) {
-                    ServiceState.RUNNING -> Color.parseColor("#4CAF93")
-                    ServiceState.STARTING, ServiceState.STOPPING -> Color.parseColor("#F5A623")
-                    ServiceState.ERROR -> Color.parseColor("#FF5370")
-                    else -> if (prefs.darkMode.value) Color.parseColor("#9AA3AF") else Color.parseColor("#5B6673")
+                    ServiceState.RUNNING -> Color.parseColor("#C8A882")
+                    ServiceState.STARTING, ServiceState.STOPPING -> Color.parseColor("#E0A458")
+                    ServiceState.ERROR -> Color.parseColor("#E06A5A")
+                    else -> if (prefs.darkMode.value) Color.parseColor("#A89A8A") else Color.parseColor("#7A6A56")
                 }
             )
             sub.text = when (state) {
