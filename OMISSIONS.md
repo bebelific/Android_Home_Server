@@ -181,6 +181,88 @@ This cascade uses the Android `PowerManager.OnThermalStatusChangedListener` (API
 
 ---
 
+## Minimum Hardware Requirements
+
+### Absolute Minimum (Print Server only)
+| Component | Requirement | Notes |
+|-----------|-------------|-------|
+| Phone | Android 5.0 (API 21), 1 GB RAM, 4 GB storage | Any SoC; Camera1 API required only for webcam |
+| USB OTG | OTG cable/adapter (micro-USB or USB-C) | Must support host mode |
+| Printer | USB Class 7 (almost all USB printers) | Check `device_filter.xml` for known VIDs |
+| Power | Wall charger (2 A minimum) + OTG Y-cable (if hub not used) | Y-cable allows charging + USB device simultaneously |
+| Network | Wi-Fi 802.11n (2.4 GHz sufficient) | Phone and PC on same LAN |
+
+**Tested phones:** Samsung Galaxy A-series (2017+), Moto G-series (2016+), Xiaomi Redmi (2017+). Any phone that supports USB OTG and runs Android 5.0+ should work for print.
+
+---
+
+### Recommended (All services)
+| Component | Requirement | Notes |
+|-----------|-------------|-------|
+| Phone | Android 7.0 (API 24), 2 GB RAM, 16 GB storage, octa-core | Thermal throttling less aggressive on larger nodes |
+| RAM | 2 GB minimum, 3 GB preferred | Webcam + File Sharing + AdBlock concurrently use ~120 MB heap |
+| Storage | 16 GB min (app + logs + print archive), 32 GB if Photo Backup local | SD card acceptable for backup target but slower |
+| Battery | Removable preferred; if non-removable, use OEM charge limit | 24/7 charging degrades lithium batteries |
+| USB OTG Hub | **Powered** hub with: USB-A × 2 (printer + drive) + RJ45 ethernet + PD passthrough | e.g. Ugreen 4-in-1, Anker A8342, or generic RTL8152-based |
+| Ethernet | 10/100 Mbps minimum (gigabit unnecessary — Wi-Fi is the bottleneck) | RTL8152 chipset best supported on Android |
+| USB Drive | Any USB 2.0/3.0 flash drive or externally powered HDD | Externally powered HDDs don't drain the phone's OTG power budget |
+| Cooling | Vertical stand or phone holder; away from direct sunlight | Passive convection; no fan needed at 10 fps webcam + file serving |
+| Screen | Off, or screensaver at minimum brightness | AMOLED screens have no burn-in risk with our moving saver |
+| Charger | 5 V/2 A minimum (5 V/3 A for webcam + ethernet + USB drive) | Underpowered chargers cause random USB device disconnects |
+
+---
+
+### Per-Service Hardware Impact
+
+| Service | CPU | RAM | Storage I/O | Network I/O | Thermal |
+|---------|-----|-----|-------------|-------------|---------|
+| Print Server | Negligible (idle) / burst during job | ~5 MB | Low (archive .prn files) | Low (raw bytes) | None |
+| File Sharing | Low (idle) / medium during transfer | ~15 MB | Medium (sustained reads/writes) | Medium (sustained) | Low |
+| Media Server | Low (serves existing files) | ~10 MB | Medium (sustained reads) | High (sustained video stream) | Low |
+| Photo Backup | Burst every 15 min (copy cycle) | ~10 MB | Medium (batch copy) | Burst (Drive upload) | Low |
+| Webcam | Medium (JPEG encode per frame) | ~25 MB (frame buffers) | Low (motion snapshots only) | Medium (MJPEG stream) | **Medium** — main heat source |
+| Ad Block DNS | Low (per-query) | ~5 MB (blocklist) | Negligible | Low (DNS packets) | None |
+| Discovery | Negligible | ~5 MB | None | Low (mDNS multicast) | None |
+| Parental Controls | Negligible (per-DNS-query check) | ~2 MB | None | None (piggybacks on DNS) | None |
+
+**Worst case (all services + active webcam viewer):** ~80 MB RAM, ~40% CPU on a mid-range SoC, ~38°C case temperature. Sustainable 24/7 with passive cooling.
+
+---
+
+### Network Requirements
+
+| Setup | Bandwidth | Notes |
+|-------|-----------|-------|
+| Print only | Negligible | Small raw data bursts |
+| File sharing (browse + occasional transfer) | 10 Mbps sufficient | WebDAV/FTP are not speed-critical |
+| Media streaming (1 viewer, 1080p file) | 5–10 Mbps sustained | Direct play, no transcoding |
+| Webcam (1 viewer, 720p 10fps) | 2–5 Mbps sustained | MJPEG at quality 60 |
+| All services + webcam | 15 Mbps recommended | Router should support QoS if other devices stream |
+
+**Router setup (for Ad Block DNS):** Set DHCP DNS to the phone's IP. Every device on the LAN is then protected. If the phone's IP changes (DHCP renewal), set a static DHCP reservation on the router.
+
+---
+
+### What Won't Work
+
+| Limitation | Affected phones | Workaround |
+|-----------|----------------|------------|
+| No USB OTG support | Some budget phones (2015–2016) | Use Wi-Fi-only services (no print, no USB backup) |
+| Camera blocked when locked (Samsung) | Most Samsung models | Keep screen on + screensaver; auto-recovers on unlock |
+| Hotspot disables Wi-Fi | Many phones (especially older) | Can't run LAN services + hotspot simultaneously |
+| No ethernet driver | Phones without RTL8152/AX88179 kernel module | Use Wi-Fi; ethernet adapter won't be recognised |
+| 32-bit only SoC | Very old phones (Android 5.0 era) | App runs but webcam encoding is slower |
+
+---
+
+## Summary
+
+The **cheapest viable setup** is: any Android 5.0+ phone with OTG + a wall charger + your existing printer, running only the Print Server. Total cost: one OTG cable (~$5).
+
+The **recommended setup** is: a 2017+ phone with a powered USB-C hub (ethernet + 2× USB-A + PD passthrough, ~$25), a USB flash drive (~$10), and the phone on a stand near your router. This runs every service simultaneously, 24/7, with no battery degradation.
+
+---
+
 ## Summary
 
 Every omission above was a conscious trade-off: **stability and longevity over feature completeness**. The app does fewer things, but the things it does, it does reliably, 24/7, on hardware that was headed for a drawer.
