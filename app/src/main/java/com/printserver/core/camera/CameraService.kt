@@ -16,8 +16,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class CameraService(
+    context: Context,
     private val prefs: PreferencesManager,
 ) : Service {
+    private val appContext = context.applicationContext
     override val id = "webcam"
     override val displayName = "Webcam Stream"
     override val defaultPort = 8081
@@ -64,29 +66,56 @@ class CameraService(
         monitorJob = CoroutineScope(Dispatchers.IO).launch {
             var lastFrames = -1L
             var stalls = 0
+            var backoffMs = 10_000L
+            var loggedLocked = false
+            val km = appContext.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
             while (isActive && _state.value == ServiceState.RUNNING) {
-                delay(10_000)
+                delay(backoffMs)
                 if (_state.value != ServiceState.RUNNING) break
                 val frames = bus.frameCount
+                val locked = km.isKeyguardLocked
                 if (!streamer.isRunning) {
                     stalls = 0
-                    applyPrefsToStreamer()
-                    try {
-                        streamer.start()
-                        PrinterLog.i(TAG, "Camera attached ${streamer.resolution}")
-                    } catch (_: Exception) {}
+                    if (locked) {
+                        backoffMs = 60_000
+                        if (!loggedLocked) {
+                            PrinterLog.i(TAG, "Device locked — camera will attach when unlocked")
+                            loggedLocked = true
+                        }
+                    } else {
+                        applyPrefsToStreamer()
+                        try {
+                            streamer.start()
+                            PrinterLog.i(TAG, "Camera attached ${streamer.resolution}")
+                            backoffMs = 10_000
+                            loggedLocked = false
+                        } catch (_: Exception) {
+                            backoffMs = (backoffMs * 2).coerceAtMost(60_000)
+                        }
+                    }
+                } else if (streamer.isPaused) {
+                    stalls = 0
                 } else if (frames == lastFrames) {
                     stalls++
-                    PrinterLog.w(TAG, "Frame stall ($stalls) at $frames frames")
-                    if (stalls >= 3) {
+                    if (locked) {
+                        PrinterLog.i(TAG, "Frames stalled while locked — waiting for unlock")
                         stalls = 0
-                        PrinterLog.i(TAG, "Restarting stalled camera")
-                        streamer.stop()
-                        applyPrefsToStreamer()
-                        try { streamer.start() } catch (_: Exception) {}
+                        backoffMs = 60_000
+                        loggedLocked = true
+                    } else {
+                        PrinterLog.w(TAG, "Frame stall ($stalls) at $frames frames")
+                        if (stalls >= 4) {
+                            stalls = 0
+                            PrinterLog.i(TAG, "Restarting stalled camera")
+                            streamer.stop()
+                            applyPrefsToStreamer()
+                            try { streamer.start() } catch (_: Exception) {}
+                        }
                     }
                 } else {
                     stalls = 0
+                    backoffMs = 10_000
+                    loggedLocked = false
                 }
                 lastFrames = frames
             }

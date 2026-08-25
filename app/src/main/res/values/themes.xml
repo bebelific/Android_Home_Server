@@ -10,4 +10,15 @@
         <item name="android:textColorPrimary">#E6E9EE</item>
         <item name="android:textColorSecondary">#9AA3AF</item>
     </style>
+
+    <style name="Theme.App.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:colorBackground">#F6F7F9</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorPrimary">#2E7D5B</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="android:statusBarColor">#E9EDF1</item>
+        <item name="android:navigationBarColor">#E9EDF1</item>
+        <item name="android:textColorPrimary">#1B2027</item>
+        <item name="android:textColorSecondary">#5B6673</item>
+    </style>
 </resources>

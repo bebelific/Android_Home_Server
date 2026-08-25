@@ -14,6 +14,7 @@ class CameraStreamer(private val bus: FrameBus) {
     @Volatile private var height = 0
     @Volatile private var lastFrameNs = 0L
     @Volatile private var paused = false
+    val isPaused: Boolean get() = paused
     @Volatile var fpsCap: Int = 15
     @Volatile var jpegQuality: Int = 70
     @Volatile var facingBack: Boolean = true
@@ -84,7 +85,7 @@ class CameraStreamer(private val bus: FrameBus) {
         }
 
         val bufSize = width * height * 3 / 2 + 1024
-        repeat(3) { cam.addCallbackBuffer(ByteArray(bufSize)) }
+        repeat(5) { cam.addCallbackBuffer(ByteArray(bufSize)) }
         cam.setPreviewCallbackWithBuffer { data, camRef ->
             try {
                 if (!paused) maybePublish(data, camRef)
@@ -107,24 +108,47 @@ class CameraStreamer(private val bus: FrameBus) {
         val minIntervalNs = 1_000_000_000L / fpsCap.coerceIn(1, 30)
         if (nowNs - lastFrameNs < minIntervalNs) return
         lastFrameNs = nowNs
-        val yuv = YuvImage(data, ImageFormat.NV21, width, height, null)
-        val out = ByteArrayOutputStream(data.size / 2)
-        yuv.compressToJpeg(Rect(0, 0, width, height), jpegQuality.coerceIn(30, 95), out)
-        val raw = out.toByteArray()
-        if (rotationDegrees % 360 == 0) {
-            bus.publish(raw)
-            return
+        val deg = ((rotationDegrees % 360) + 360) % 360
+        val (frame, fw, fh) = if (deg == 0) Triple(data, width, height) else rotateNv21(data, width, height, deg)
+        val yuv = YuvImage(frame, ImageFormat.NV21, fw, fh, null)
+        val out = ByteArrayOutputStream(frame.size / 2)
+        yuv.compressToJpeg(Rect(0, 0, fw, fh), jpegQuality.coerceIn(30, 95), out)
+        bus.publish(out.toByteArray())
+    }
+
+    private fun rotateNv21(src: ByteArray, w: Int, h: Int, deg: Int): Triple<ByteArray, Int, Int> {
+        val out = ByteArray(src.size)
+        val ySize = w * h
+        return when (deg) {
+            90 -> {
+                var i = 0
+                for (dy in 0 until w) for (dx in 0 until h) out[i++] = src[(h - 1 - dx) * w + dy]
+                for (dy in 0 until w / 2) for (dx in 0 until h / 2) {
+                    val si = ySize + ((h / 2 - 1 - dx) * (w / 2) + dy) * 2
+                    out[i++] = src[si]; out[i++] = src[si + 1]
+                }
+                Triple(out, h, w)
+            }
+            270 -> {
+                var i = 0
+                for (dy in 0 until w) for (dx in 0 until h) out[i++] = src[(w - 1 - dy) * w + dx]
+                for (dy in 0 until w / 2) for (dx in 0 until h / 2) {
+                    val si = ySize + ((w / 2 - 1 - dy) * (w / 2) + dx) * 2
+                    out[i++] = src[si]; out[i++] = src[si + 1]
+                }
+                Triple(out, h, w)
+            }
+            180 -> {
+                var i = 0
+                for (dy in 0 until h) for (dx in 0 until w) out[i++] = src[(h - 1 - dy) * w + (w - 1 - dx)]
+                for (dy in 0 until h / 2) for (dx in 0 until w / 2) {
+                    val si = ySize + ((h / 2 - 1 - dy) * (w / 2) + (w / 2 - 1 - dx)) * 2
+                    out[i++] = src[si]; out[i++] = src[si + 1]
+                }
+                Triple(out, w, h)
+            }
+            else -> Triple(src, w, h)
         }
-        val bmp = android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size) ?: run {
-            bus.publish(raw); return
-        }
-        val m = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-        val rotated = android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
-        val out2 = ByteArrayOutputStream(raw.size / 2)
-        rotated.compress(android.graphics.Bitmap.CompressFormat.JPEG, jpegQuality.coerceIn(30, 95), out2)
-        bus.publish(out2.toByteArray())
-        if (rotated !== bmp) bmp.recycle()
-        rotated.recycle()
     }
 
     fun pause() {

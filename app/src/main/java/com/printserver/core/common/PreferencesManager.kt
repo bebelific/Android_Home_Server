@@ -39,6 +39,8 @@ object PrefKeys {
     const val SAVER_SHOW_CLOCK = "saver_show_clock"
     const val SAVER_SHOW_STATUS = "saver_show_status"
     const val SAVER_SPEED = "saver_speed"
+    const val DARK_MODE = "dark_mode"
+    const val EMERGENCY_STOPPED = "emergency_stopped"
     const val PC_ENABLED = "pc_enabled"
     const val PC_DEVICES = "pc_devices"
     const val PC_BLOCK_ADULT = "pc_block_adult"
@@ -90,6 +92,8 @@ class PreferencesManager(context: Context) {
     private val _saverShowClock = MutableStateFlow(prefs.getBoolean(PrefKeys.SAVER_SHOW_CLOCK, true))
     private val _saverShowStatus = MutableStateFlow(prefs.getBoolean(PrefKeys.SAVER_SHOW_STATUS, true))
     private val _saverSpeed = MutableStateFlow(prefs.getInt(PrefKeys.SAVER_SPEED, 1))
+    private val _darkMode = MutableStateFlow(prefs.getBoolean(PrefKeys.DARK_MODE, true))
+    private val _emergencyStopped = MutableStateFlow(prefs.getBoolean(PrefKeys.EMERGENCY_STOPPED, false))
     private val _pcEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_ENABLED, false))
     private val _pcDevices = MutableStateFlow(prefs.getString(PrefKeys.PC_DEVICES, "") ?: "")
     private val _pcBlockAdult = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_BLOCK_ADULT, true))
@@ -136,6 +140,8 @@ class PreferencesManager(context: Context) {
     val saverShowClock: StateFlow<Boolean> = _saverShowClock.asStateFlow()
     val saverShowStatus: StateFlow<Boolean> = _saverShowStatus.asStateFlow()
     val saverSpeed: StateFlow<Int> = _saverSpeed.asStateFlow()
+    val darkMode: StateFlow<Boolean> = _darkMode.asStateFlow()
+    val emergencyStopped: StateFlow<Boolean> = _emergencyStopped.asStateFlow()
     val pcEnabled: StateFlow<Boolean> = _pcEnabled.asStateFlow()
     val pcDevices: StateFlow<String> = _pcDevices.asStateFlow()
     val pcBlockAdult: StateFlow<Boolean> = _pcBlockAdult.asStateFlow()
@@ -186,6 +192,8 @@ class PreferencesManager(context: Context) {
     fun setSaverShowClock(v: Boolean) { prefs.edit().putBoolean(PrefKeys.SAVER_SHOW_CLOCK, v).apply(); _saverShowClock.value = v }
     fun setSaverShowStatus(v: Boolean) { prefs.edit().putBoolean(PrefKeys.SAVER_SHOW_STATUS, v).apply(); _saverShowStatus.value = v }
     fun setSaverSpeed(v: Int) { val c = v.coerceIn(0, 2); prefs.edit().putInt(PrefKeys.SAVER_SPEED, c).apply(); _saverSpeed.value = c }
+    fun setDarkMode(v: Boolean) { prefs.edit().putBoolean(PrefKeys.DARK_MODE, v).apply(); _darkMode.value = v }
+    fun setEmergencyStopped(v: Boolean) { prefs.edit().putBoolean(PrefKeys.EMERGENCY_STOPPED, v).apply(); _emergencyStopped.value = v }
     fun setPcEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_ENABLED, v).apply(); _pcEnabled.value = v }
     fun setPcDevices(v: String) { prefs.edit().putString(PrefKeys.PC_DEVICES, v).apply(); _pcDevices.value = v }
     fun setPcBlockAdult(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_BLOCK_ADULT, v).apply(); _pcBlockAdult.value = v }

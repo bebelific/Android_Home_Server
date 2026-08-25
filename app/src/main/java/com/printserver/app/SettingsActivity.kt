@@ -23,6 +23,14 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
         prefs = PreferencesManager(this)
 
+        val swDark = findViewById<Switch>(R.id.swDarkMode)
+        swDark.isChecked = prefs.darkMode.value
+        swDark.setOnCheckedChangeListener { _, c ->
+            prefs.setDarkMode(c)
+            MainActivity.appliedDark = null
+            recreate()
+        }
+
         port(R.id.etPrintPort, prefs.printPort.value) { prefs.setPrintPort(it) }
         port(R.id.etWebdavPort, prefs.webdavPort.value) { prefs.setWebdavPort(it) }
         port(R.id.etFtpPort, prefs.ftpPort.value) { prefs.setFtpPort(it) }

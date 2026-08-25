@@ -34,6 +34,19 @@ import java.io.File
 
 class HomeServerService : Service() {
 
+    companion object {
+        const val TAG = "HomeServer"
+        const val ID_PRINT = "print_server"
+        const val ID_FILES = "file_sharing"
+        const val ID_WEBCAM = "webcam"
+        const val ID_DISCOVERY = "discovery"
+        const val ID_BACKUP = "photo_backup"
+        const val ID_ADBLOCK = "adblock"
+        @Volatile var isRunning = false
+    }
+
+    init { isRunning = true }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var prefs: PreferencesManager
     private lateinit var locks: PowerLocks
@@ -50,6 +63,7 @@ class HomeServerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         PrinterLog.i(TAG, "Creating")
         prefs = PreferencesManager(this)
         locks = PowerLocks(this)
@@ -59,7 +73,7 @@ class HomeServerService : Service() {
 
         val print = PrintService(this, prefs, usb)
         val files = FileService(prefs)
-        val camera = CameraService(prefs)
+        val camera = CameraService(applicationContext, prefs)
         val backup = com.printserver.core.backup.PhotoBackupService(prefs)
         val adblock = com.printserver.core.adblock.AdBlockService(prefs)
         registry.register(print)
@@ -244,6 +258,7 @@ class HomeServerService : Service() {
     private fun emergencyStop(reason: String) {
         if (shuttingDown) return
         shuttingDown = true
+        prefs.setEmergencyStopped(true)
         PrinterLog.e(TAG, "EMERGENCY STOP ($reason)")
         registry.stopAll()
         thermal.stop()
@@ -255,10 +270,12 @@ class HomeServerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForegroundCompat()
+        AlarmReceiver.scheduleNext(this)
         return START_STICKY
     }
 
     override fun onDestroy() {
+        isRunning = false
         com.printserver.core.power.ChargeGuard.stop()
         com.printserver.core.power.InternetWatchdog.stop()
         com.printserver.core.adblock.GatewayMode.clear(this)
@@ -333,15 +350,5 @@ class HomeServerService : Service() {
     private fun startForegroundCompat() {
         val type = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
         ServiceCompat.startForeground(this, notifId, buildNotification(), type)
-    }
-
-    companion object {
-        const val TAG = "HomeServer"
-        const val ID_PRINT = "print_server"
-        const val ID_FILES = "file_sharing"
-        const val ID_WEBCAM = "webcam"
-        const val ID_DISCOVERY = "discovery"
-        const val ID_BACKUP = "photo_backup"
-        const val ID_ADBLOCK = "adblock"
     }
 }

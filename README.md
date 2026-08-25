@@ -1,6 +1,6 @@
-# AndroidHomeServer
+# Bebelific Homeserver
 
-Turn an old Android phone (5.0+) into a **24/7 LAN home server**: network print server, file sharing, live webcam, and zero-config discovery — each independently toggleable, surviving reboots and Doze.
+Turn an old Android phone (5.0+) into a **24/7 LAN home server**: network print server, file sharing, media streaming, photo backup (Drive + USB), live webcam, ad-block DNS, parental controls, and zero-config discovery — each independently toggleable, surviving reboots and Doze.
 
 Philosophy: the phone is a **transport/appliance**, not a renderer. Your PC's drivers do the heavy lifting; the phone forwards, serves, and streams.
 
@@ -108,9 +108,20 @@ Both are free for personal use and keep everything off the public internet.
 
 - Foreground service (`dataSync|camera`), `START_STICKY`, wake+wifi locks while ≥1 service runs
 - Auto-start: `BOOT_COMPLETED` / `POWER_CONNECTED` / `MY_PACKAGE_REPLACED`
+- **Alarm heartbeat**: every 15 min a wakeup alarm checks the service and resurrects it if the process died silently
 - Watchdog: unhealthy services restarted every 60 s; disk/heap/battery deep-check every 6 h
-- Thermal cascade: LIGHT → halve FPS/transfers · MODERATE → pause cam, quarter transfers · SEVERE → stop non-critical · CRITICAL → emergency stop
-- Battery health CSV (`battery_health.csv`, 15-min samples) in app storage
+- Crash logger: uncaught exceptions are written to the log file before process death
+- Thermal cascade: LIGHT → halve FPS/transfers · MODERATE → pause cam · SEVERE → stop non-critical · CRITICAL → emergency stop (auto-restart stays off until you open the app)
+- Battery health CSV + **charging guard** (see below)
+- Runtime audit gate: `python scripts/audit.py <phone-ip>` probes every live service (ports, webcam frame-flow, HTTP Range seek, FTP banner, DNS block/allow) — run it after any change
+
+## Parental controls & gateway mode
+
+Dashboard → **Parental Controls**: mark kids' devices (auto-detected DNS clients), block adult/social categories, set a bedtime blackout window, or hit quick-pause. With **root**, **Gateway mode** redirects every hotspot client's DNS into the filter and hard-blocks kids' IPs during bedtime/pause. DNS-based filtering: DoH-capable apps can bypass.
+
+## Dark mode & screensaver
+
+Settings → **Dark mode** toggle. The screensaver keeps the always-on display safe: Matrix-style digital rain over your pixel logo, clock/date, and a live status block — every element **bounces to a new screen position every 20 s** and the rain never stops moving. Show/hide each element and set drift speed in Settings → Screensaver.
 - **Charging guard**: set a charge limit (default 80%). On **rooted** phones the app pauses charging at the limit and resumes 15% lower (sysfs). Without root it monitors and logs only — true bypass charging is brand-specific:
 
   | Brand | Built-in option |

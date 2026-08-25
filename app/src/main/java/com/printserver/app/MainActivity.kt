@@ -21,6 +21,7 @@ import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
@@ -72,14 +73,24 @@ class MainActivity : AppCompatActivity() {
     private val idleRunnable2: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         prefs = PreferencesManager(this)
+        applyTheme()
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        if (prefs.emergencyStopped.value) {
+            prefs.setEmergencyStopped(false)
+            Toast.makeText(this, "Emergency stop cleared — services can restart", Toast.LENGTH_LONG).show()
+        }
         bindViews()
         buildCards()
         bindToService()
         applyKeepScreenOn()
         requestRuntimePermissions()
+    }
+
+    private fun applyTheme() {
+        appliedDark = prefs.darkMode.value
+        setTheme(if (appliedDark == true) R.style.Theme_App else R.style.Theme_App_Light)
     }
 
     override fun onStart() { super.onStart(); handler.post(refreshRunnable) }
@@ -229,7 +240,7 @@ class MainActivity : AppCompatActivity() {
         tvSaverDate = findViewById(R.id.tvSaverDate)
         tvSaverStatus = findViewById(R.id.tvSaverStatus)
 
-        textStatus.setBackgroundResource(R.drawable.bg_pill)
+        textStatus.setBackgroundResource(if (prefs.darkMode.value) R.drawable.bg_pill else R.drawable.bg_pill_light)
 
         buttonUsb.setOnClickListener {
             bound?.printService()?.requestUsbPermission { runOnUiThread { refresh() } }
@@ -305,17 +316,19 @@ class MainActivity : AppCompatActivity() {
     private fun requestRuntimePermissions() {
         val wanted = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) wanted += Manifest.permission.POST_NOTIFICATIONS
-        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
             wanted += Manifest.permission.CAMERA
         if (Build.VERSION.SDK_INT <= 32 &&
-            checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
         ) wanted += Manifest.permission.WRITE_EXTERNAL_STORAGE
-        if (wanted.isNotEmpty()) requestPermissions(wanted.toTypedArray(), 1)
+        if (wanted.isNotEmpty()) androidx.core.app.ActivityCompat.requestPermissions(this, wanted.toTypedArray(), 1)
     }
 
     private fun refresh() {
+        if (appliedDark != prefs.darkMode.value) { recreate(); return }
+        val dark = appliedDark == true
         val svcList = bound?.services()?.allServices ?: emptyList()
         var running = 0
         for ((pair, def) in cards.values) {
@@ -393,7 +406,7 @@ class MainActivity : AppCompatActivity() {
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(10), dp(12), dp(10))
-            setBackgroundResource(R.drawable.bg_card)
+            setBackgroundResource(if (prefs.darkMode.value) R.drawable.bg_card else R.drawable.bg_card_light)
         }
         private val row1 = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -407,7 +420,7 @@ class MainActivity : AppCompatActivity() {
         private val title = TextView(ctx).apply {
             textSize = 13f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setTextColor(Color.parseColor("#E6E9EE"))
+            setTextColor(if (prefs.darkMode.value) Color.parseColor("#E6E9EE") else Color.parseColor("#1B2027"))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
@@ -459,7 +472,7 @@ class MainActivity : AppCompatActivity() {
                 ServiceState.RUNNING -> Color.parseColor("#4CAF93")
                 ServiceState.STARTING, ServiceState.STOPPING -> Color.parseColor("#F5A623")
                 ServiceState.ERROR -> Color.parseColor("#FF5370")
-                else -> Color.parseColor("#3A414B")
+                else -> if (prefs.darkMode.value) Color.parseColor("#3A414B") else Color.parseColor("#C4CBD3")
             }
             dot.backgroundTintList = ColorStateList.valueOf(color)
             sub.setTextColor(
@@ -467,7 +480,7 @@ class MainActivity : AppCompatActivity() {
                     ServiceState.RUNNING -> Color.parseColor("#4CAF93")
                     ServiceState.STARTING, ServiceState.STOPPING -> Color.parseColor("#F5A623")
                     ServiceState.ERROR -> Color.parseColor("#FF5370")
-                    else -> Color.parseColor("#9AA3AF")
+                    else -> if (prefs.darkMode.value) Color.parseColor("#9AA3AF") else Color.parseColor("#5B6673")
                 }
             )
             sub.text = when (state) {
@@ -486,5 +499,9 @@ class MainActivity : AppCompatActivity() {
         if (serviceBound) runCatching { unbindService(connection) }
     }
 
-    companion object { private const val IDLE_MS = 5L * 60 * 1000; private const val POSITION_MS = 20_000L }
+    companion object {
+        private const val IDLE_MS = 5L * 60 * 1000
+        private const val POSITION_MS = 20_000L
+        var appliedDark: Boolean? = null
+    }
 }
