@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.App" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.App" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:colorBackground">#0E1116</item>
+        <item name="colorSurface">#171C24</item>
+        <item name="colorPrimary">#4CAF93</item>
+        <item name="colorOnPrimary">#06231C</item>
+        <item name="android:statusBarColor">#0E1116</item>
+        <item name="android:navigationBarColor">#0E1116</item>
+        <item name="android:textColorPrimary">#E6E9EE</item>
+        <item name="android:textColorSecondary">#9AA3AF</item>
+    </style>
 </resources>

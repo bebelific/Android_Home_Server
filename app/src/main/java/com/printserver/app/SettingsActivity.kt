@@ -48,6 +48,22 @@ class SettingsActivity : AppCompatActivity() {
         thermal.isChecked = prefs.thermalThrottleEnabled.value
         thermal.setOnCheckedChangeListener { _, c -> prefs.setThermalThrottleEnabled(c) }
 
+        val netWatch = findViewById<Switch>(R.id.swNetWatch)
+        val tvNet = findViewById<TextView>(R.id.tvNetWatch)
+        fun netText() { tvNet.text = com.printserver.core.power.InternetWatchdog.statusLong() }
+        netWatch.isChecked = prefs.netWatchEnabled.value
+        netText()
+        netWatch.setOnCheckedChangeListener { _, c ->
+            prefs.setNetWatchEnabled(c)
+            if (c) com.printserver.core.power.InternetWatchdog.start(applicationContext) { prefs.netWatchEnabled.value }
+            else com.printserver.core.power.InternetWatchdog.stop()
+            netText()
+        }
+
+        val keepScreen = findViewById<Switch>(R.id.swKeepScreen)
+        keepScreen.isChecked = prefs.displayKeepOn.value
+        keepScreen.setOnCheckedChangeListener { _, c -> prefs.setDisplayKeepOn(c) }
+
         val user = findViewById<EditText>(R.id.etUsername)
         val pass = findViewById<EditText>(R.id.etPassword)
         user.setText(prefs.username.value)

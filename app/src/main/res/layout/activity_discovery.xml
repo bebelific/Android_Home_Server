@@ -11,4 +11,14 @@
         android:textSize="13sp"
         android:fontFamily="monospace"
         android:textIsSelectable="true"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp"
+        android:textSize="12sp"
+        android:text="HOW TO USE\nNothing to configure: keep Discovery toggled on and enabled services advertise themselves. macOS Finder/iOS Files show them under Bonjour; Linux (Avahi) via 'browse _http._tcp'; Windows users map the WebDAV URL directly. Printers may auto-appear in Windows 'Add printer' — otherwise use Standard TCP/IP port 9100."
+        android:textColor="?android:attr/textColorSecondary"/>
 </ScrollView>

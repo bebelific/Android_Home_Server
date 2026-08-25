@@ -69,6 +69,22 @@ class ParentalActivity : ServiceBoundActivity() {
         findViewById<Button>(R.id.buttonResume).setOnClickListener { prefs.setPcPauseUntil(0); refresh() }
         etStart.setOnFocusChangeListener { _, f -> if (!f) saveTimes() }
         etEnd.setOnFocusChangeListener { _, f -> if (!f) saveTimes() }
+
+        val swGateway = findViewById<Switch>(R.id.swGateway)
+        swGateway.isChecked = com.printserver.core.adblock.GatewayMode.active
+        swGateway.setOnCheckedChangeListener { _, c ->
+            val adblock = server?.services()?.get(HomeServerService.ID_ADBLOCK) as? AdBlockService
+            val port = adblock?.actualPort?.takeIf { it > 0 } ?: prefs.adblockPort.value
+            if (c) {
+                com.printserver.core.adblock.GatewayMode.apply(applicationContext, prefs, port)
+                    .onSuccess { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
+                    .onFailure { Toast.makeText(this, "Gateway mode: ${it.message}", Toast.LENGTH_LONG).show(); swGateway.isChecked = false }
+            } else {
+                com.printserver.core.adblock.GatewayMode.clear(applicationContext)
+                Toast.makeText(this, "Gateway mode off", Toast.LENGTH_SHORT).show()
+            }
+            refresh()
+        }
     }
 
     private fun pause(minutes: Int) {
@@ -115,6 +131,7 @@ class ParentalActivity : ServiceBoundActivity() {
                 append("Bedtime: ${prefs.pcScheduleStart.value}–${prefs.pcScheduleEnd.value}" +
                     (if (ParentalControl.inScheduleWindow(prefs)) "  (active now)" else "") + "\n")
             append("Blocked (parental): ${adblock?.pcBlockedCount() ?: 0}\n")
+            append("Gateway mode: ${com.printserver.core.adblock.GatewayMode.lastStatus.ifBlank { "off" }}")
         }
 
         devicesBox.removeAllViews()

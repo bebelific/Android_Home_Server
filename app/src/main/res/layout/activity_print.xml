@@ -60,5 +60,20 @@
             android:textSize="12sp"
             android:text="1. Install your printer's normal driver on the PC\n2. Settings → Printers → Add device → Add manually\n3. Choose 'Standard TCP/IP Port' → phone IP\n4. Port 9100, Protocol: Raw\n5. Print a test page — bytes flow PC → Wi-Fi → phone → USB"
             android:textColor="?android:attr/textColorSecondary"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:text="1. Connect the printer via USB-OTG (cable + adapter)\n2. Tap 'Grant USB printer permission' when it appears\n3. Print from the PC as if the printer were networked\nOne job at a time. Enable 'Archive print jobs' in Settings to keep the last 20 raw .prn files (share/PrintJobs) for replay/debug."
+            android:textColor="?android:attr/textColorSecondary"/>
     </LinearLayout>
 </ScrollView>

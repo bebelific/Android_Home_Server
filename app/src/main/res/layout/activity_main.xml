@@ -1,121 +1,216 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#0E1116">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="AndroidHomeServer"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#E6E9EE"/>
+
+            <TextView
+                android:id="@+id/textStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_pill"
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#9AA3AF"/>
+
+            <TextView
+                android:id="@+id/textNetwork"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="13sp"
+                android:textColor="#9AA3AF"/>
+
+            <TextView
+                android:id="@+id/textAddresses"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textIsSelectable="true"
+                android:textSize="12sp"
+                android:textColor="#9AA3AF"/>
+
+            <Button
+                android:id="@+id/buttonUsb"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"
+                android:text="Grant USB printer permission"/>
+
+            <LinearLayout
+                android:id="@+id/serviceCardsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="12dp"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="12dp"
+                android:background="#232A33"/>
+
+            <TextView
+                android:id="@+id/textPower"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:textColor="#9AA3AF"/>
+
+            <TextView
+                android:id="@+id/textUptime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textSize="12sp"
+                android:textColor="#9AA3AF"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/buttonLogs"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Logs"/>
+
+                <Button
+                    android:id="@+id/buttonSettings"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Settings"/>
+
+                <Button
+                    android:id="@+id/buttonRestartAll"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Restart"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/buttonAbout"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="About"/>
+
+                <Button
+                    android:id="@+id/buttonSaver"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Screensaver"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="#FF5370"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/textLogs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="#10141A"
+                android:fontFamily="monospace"
+                android:padding="8dp"
+                android:textColor="#7FC98F"
+                android:textSize="9sp"/>
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
+        android:id="@+id/saverOverlay"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:gravity="center"
         android:orientation="vertical"
-        android:padding="16dp">
-
-        <TextView
-            android:id="@+id/textStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="22sp"
-            android:textStyle="bold"/>
-
-        <TextView
-            android:id="@+id/textAddresses"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textIsSelectable="true"
-            android:textSize="13sp"/>
-
-        <Button
-            android:id="@+id/buttonUsb"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:text="Grant USB printer permission"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="6dp"
-            android:text="SERVICES"
-            android:textStyle="bold"/>
+        android:visibility="gone">
 
         <LinearLayout
-            android:id="@+id/serviceCardsContainer"
-            android:layout_width="match_parent"
+            android:id="@+id/saverContent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"/>
+            android:gravity="center"
+            android:orientation="vertical">
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginVertical="12dp"
-            android:background="?android:attr/listDivider"/>
-
-        <TextView
-            android:id="@+id/textPower"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"/>
-
-        <TextView
-            android:id="@+id/textUptime"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/buttonLogs"
-                android:layout_width="0dp"
+            <ImageView
+                android:id="@+id/saverLogo"
+                android:layout_width="200dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Logs"/>
+                android:adjustViewBounds="true"
+                android:alpha="0.30"
+                android:src="@drawable/saver_logo"
+                android:contentDescription="logo"/>
 
-            <Button
-                android:id="@+id/buttonSettings"
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/tvSaverClock"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:text="Settings"/>
+                android:layout_marginTop="18dp"
+                android:textSize="54sp"
+                android:textStyle="bold"
+                android:textColor="#3A414B"
+                android:fontFamily="sans-serif-light"/>
 
-            <Button
-                android:id="@+id/buttonRestartAll"
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/tvSaverDate"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:text="Restart all"/>
+                android:textSize="14sp"
+                android:textColor="#2E343D"/>
+
+            <TextView
+                android:id="@+id/tvSaverStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:textSize="13sp"
+                android:textColor="#2E343D"/>
         </LinearLayout>
-
-        <Button
-            android:id="@+id/buttonAbout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="About"/>
-
-        <TextView
-            android:id="@+id/textError"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="#B00020"
-            android:visibility="gone"/>
-
-        <TextView
-            android:id="@+id/textLogs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:background="#FF101010"
-            android:fontFamily="monospace"
-            android:padding="6dp"
-            android:textColor="#FF9FE19F"
-            android:textSize="9sp"/>
     </LinearLayout>
-</ScrollView>
+</FrameLayout>

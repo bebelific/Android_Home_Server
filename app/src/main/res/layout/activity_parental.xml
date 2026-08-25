@@ -182,12 +182,35 @@
                 android:text="Resume"/>
         </LinearLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Gateway mode (root: filter hotspot clients)"/>
+            <Switch
+                android:id="@+id/swGateway"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:textSize="12sp"
-            android:text="DNS-based: blocks domains for the devices listed. Apps using their own encrypted DNS (DoH) or hardcoded IPs can bypass. Works only for devices using this phone as their DNS server."
+            android:text="1. Enable Ad Block DNS on the dashboard\n2. Kids' phones: connect to home Wi-Fi, set their DNS to this phone's IP (or enable Gateway mode + your hotspot)\n3. Tap detected clients above to mark them as kids devices\n4. Choose filters (adult/social) and an optional bedtime window\n5. Use Quick Pause for instant cut-off\nBypass warning: apps with their own encrypted DNS or hardcoded IPs can evade DNS filtering."
             android:textColor="?android:attr/textColorSecondary"/>
     </LinearLayout>
 </ScrollView>

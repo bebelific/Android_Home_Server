@@ -118,11 +118,26 @@
             android:fontFamily="monospace"
             android:textIsSelectable="true"/>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:text="1. Toggle Webcam on the dashboard (grant camera permission)\n2. This page shows the live view; screen stays on while here\n3. Any browser: http://phone:8081/view (Chrome-safe player)\n4. VLC / players: http://phone:8081/stream\n5. NVR / automation: poll /snapshot.jpg\n6. Torch needs the back camera; lower FPS/quality on weak Wi-Fi\nIf the phone locks, the camera auto-recovers within ~20 s."
+            android:textColor="?android:attr/textColorSecondary"/>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
             <Button
                 android:id="@+id/buttonOpenStream"
                 android:layout_width="0dp"

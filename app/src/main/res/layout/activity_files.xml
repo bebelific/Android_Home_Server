@@ -63,6 +63,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:text="1. Toggle File Sharing on the dashboard\n2. Browser: open http://phone:8080 — upload, download, new folder, delete\n3. Map as a drive: Windows 'Map network drive' → http://phone:8080 (WebDAV)\n4. FTP clients: ftp://phone:2121\n5. Set a password in Settings → Access (blank = open to everyone on LAN)\n6. Media files here appear in the Media Server page."
+            android:textColor="?android:attr/textColorSecondary"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:textSize="12sp"
             android:text="Map as a drive (WebDAV): Windows → Map network drive → http://phone:8080/ · macOS → Finder ⌘K · Linux → gvfs/davfs. FTP works in any client."
             android:textColor="?android:attr/textColorSecondary"/>

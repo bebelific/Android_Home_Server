@@ -59,5 +59,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Run backup now"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:text="1. Toggle Photo Backup on the dashboard\n2. New camera photos/videos copy every 15 min into PhotoBackup/device-name/ on the share\n3. Optional: 'Link Google Drive folder' → copies also upload to your Drive (one-time picker, no sign-in needed beyond Drive app)\n4. Optional: plug a USB OTG drive and switch on 'Also copy to USB drive'\n5. 'Run backup now' forces an immediate cycle\nNothing is ever deleted — it is a one-way archive."
+            android:textColor="?android:attr/textColorSecondary"/>
     </LinearLayout>
 </ScrollView>

@@ -23,5 +23,20 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="Update blocklist (StevenBlack)"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:text="1. Toggle Ad Block DNS on the dashboard\n2. Tap 'Update blocklist' once (downloads ~100k ad/tracker domains)\n3. Best: set your ROUTER's DHCP DNS to this phone's IP — every device on your Wi-Fi is then protected\n4. Or set DNS manually per device to the phone IP\n5. Test from a PC: nslookup doubleclick.net PHONE_IP → 0.0.0.0\n6. Pair with Parental Controls for per-kid filtering"
+            android:textColor="?android:attr/textColorSecondary"/>
     </LinearLayout>
 </ScrollView>

@@ -90,6 +90,16 @@ class HomeServerService : Service() {
             { prefs.chargeLimit.value },
             { battery.readNow()?.let { it.percent to (it.plugged != "NONE") } }
         )
+        if (Build.VERSION.SDK_INT >= 26) {
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
+                android.app.NotificationChannel(
+                    com.printserver.core.power.InternetWatchdog.CHANNEL_ID,
+                    "Internet watchdog",
+                    NotificationManager.IMPORTANCE_HIGH
+                )
+            )
+        }
+        com.printserver.core.power.InternetWatchdog.start(this) { prefs.netWatchEnabled.value }
         startForegroundCompat()
         thermal.start()
         battery.start()
@@ -243,6 +253,8 @@ class HomeServerService : Service() {
 
     override fun onDestroy() {
         com.printserver.core.power.ChargeGuard.stop()
+        com.printserver.core.power.InternetWatchdog.stop()
+        com.printserver.core.adblock.GatewayMode.clear(this)
         if (!shuttingDown) {
             registry.stopAll()
             thermal.stop()

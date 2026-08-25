@@ -28,5 +28,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="HOW TO USE"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:text="1. Put videos/music anywhere inside the share (File Sharing page shows the folder)\n2. Toggle File Sharing on, then Rescan here\n3. Tap an item → choose VLC / MX Player / any player\n4. Seeking works (HTTP Range). No transcoding — the phone just serves the file\n5. On a PC/TV, open the shown http://phone:8080 link directly in a browser or player"
+            android:textColor="?android:attr/textColorSecondary"/>
     </LinearLayout>
 </ScrollView>
