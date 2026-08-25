@@ -186,9 +186,9 @@
                 android:id="@+id/tvSaverClock"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="52sp"
+                android:textSize="50sp"
                 android:textStyle="bold"
-                android:textColor="#3A414B"
+                android:textColor="#4A525E"
                 android:fontFamily="sans-serif-light"/>
 
             <TextView
@@ -196,14 +196,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
-                android:textColor="#2E343D"/>
-        </LinearLayout>
+                android:textColor="#39414B"/>
 
-        <TextView
-            android:id="@+id/tvSaverStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="#2E343D"/>
+            <TextView
+                android:id="@+id/tvSaverStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="#6B7683"/>
+        </LinearLayout>
     </FrameLayout>
 </FrameLayout>

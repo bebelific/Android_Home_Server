@@ -99,25 +99,32 @@ class PhotoBackupService(
             val src = sourceDir()
             if (!src.isDirectory) { lastError = "source missing: ${src.path}"; return }
             val device = Build.MODEL.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            val localEnabled = prefs.backupLocal.value
             val dest = File(backupRoot(context), "PhotoBackup/$device")
-            dest.mkdirs()
+            if (localEnabled) dest.mkdirs()
             val marker = prefs.backupLastRun.value
             val drive: Uri? = prefs.driveTreeUri.value.takeIf { it.isNotBlank() }?.let { Uri.parse(it) }
             var copied = 0
+            var okMarker = marker
             val candidates = src.listFiles { f -> f.isFile && f.lastModified() > marker && isMedia(f.name) }
                 ?.sortedBy { it.lastModified() } ?: emptyList()
             for (f in candidates) {
+                var fileOk = true
                 val out = File(dest, f.name)
-                if (!out.exists() || out.length() != f.length()) {
-                    runCatching { f.copyTo(out, overwrite = true) }
-                        .onSuccess {
-                            copied++
-                            if (drive != null) DriveSaf.writeAppend(context, drive, f.name, mime(f.name), out)
-                        }
-                        .onFailure { lastError = it.message }
-                } else if (drive != null) {
-                    DriveSaf.writeAppend(context, drive, f.name, mime(f.name), out)
+                if (localEnabled) {
+                    if (!out.exists() || out.length() != f.length()) {
+                        runCatching { f.copyTo(out, overwrite = true) }
+                            .onSuccess { copied++ }
+                            .onFailure { lastError = it.message; fileOk = false }
+                    }
                 }
+                val payload = if (localEnabled && out.exists()) out else f
+                if (drive != null) {
+                    if (!DriveSaf.writeAppend(context, drive, f.name, mime(f.name), payload)) {
+                        lastError = "drive upload failed: ${f.name}"
+                    }
+                }
+                if (fileOk) okMarker = f.lastModified()
             }
 
             var usbCopied = 0
@@ -144,10 +151,10 @@ class PhotoBackupService(
             totalUsbCopied += usbCopied
             lastCopied = copied
             totalCopied += copied
-            lastRunMs = System.currentTimeMillis() - 1000
-            prefs.setBackupLastRun(lastRunMs)
-            lastError = null
-            PrinterLog.i(TAG, "Cycle done: $copied new (${candidates.size} seen) -> ${dest.path}")
+            prefs.setBackupLastRun(okMarker)
+            lastRunMs = System.currentTimeMillis()
+            lastError = if (lastError != null) lastError else null
+            PrinterLog.i(TAG, "Cycle done: $copied new (${candidates.size} seen) marker->${okMarker}")
         } catch (e: Exception) {
             lastError = e.message
             PrinterLog.w(TAG, "cycle failed: ${e.message}")

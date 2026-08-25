@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
     private val floaters = mutableListOf<Floater>()
     private var saverOn = false
     private var lastStatusText = 0L
+    private val positionTick = Runnable { swapSaverPositions() }
     private val idleRunnable2: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -118,20 +119,45 @@ class MainActivity : AppCompatActivity() {
         }
         floaters.clear()
         saverOverlay.post {
-            val w = saverOverlay.width
-            val h = saverOverlay.height
-            if (w <= 0 || h <= 0) return@post
-            val base = floatSpeedDp()
-            for (f in listOf(saverClockBlock, tvSaverStatus)) {
-                if (f.visibility != View.VISIBLE) continue
-                f.translationX = (0..(w - f.width).coerceAtLeast(0)).random().toFloat()
-                f.translationY = (0..(h - f.height).coerceAtLeast(0)).random().toFloat()
-                val angle = Math.toRadians((0..359).random().toDouble())
-                val jitter = 0.85 + Math.random() * 0.3
-                floaters.add(Floater(f, (base * jitter * Math.cos(angle)).toFloat(), (base * jitter * Math.sin(angle)).toFloat()))
-            }
+            placeSaverBlocks(initial = true)
             handler.post(frameTick)
+            handler.postDelayed(positionTick, POSITION_MS)
         }
+    }
+
+    private fun placeSaverBlocks(initial: Boolean) {
+        val w = saverOverlay.width
+        val h = saverOverlay.height
+        if (w <= 0 || h <= 0) return
+        val m = dp(28)
+        val cellW = (w - 2 * m) / 3f
+        val cellH = (h - 2 * m) / 3f
+        var c1 = (0..8).random()
+        var c2 = (0..8).random()
+        if (c2 == c1) c2 = (c1 + (1..8).random()) % 9
+        if (!initial) {
+            val old1 = (saverClockBlock.translationX / cellW).toInt().coerceIn(0, 2) +
+                3 * ((saverClockBlock.translationY / cellH).toInt().coerceIn(0, 2))
+            if (c1 == old1) c1 = (c1 + (1..8).random()) % 9
+            if (c2 == c1 || c2 == old1) c2 = (c1 + (1..8).random()) % 9
+        }
+        placeAt(saverClockBlock, c1 % 3, c1 / 3, m, cellW, cellH)
+        placeAt(tvSaverStatus, c2 % 3, c2 / 3, m, cellW, cellH)
+    }
+
+    private fun placeAt(v: View, col: Int, row: Int, m: Int, cellW: Float, cellH: Float) {
+        val cx = m + col * cellW + cellW / 2f
+        val cy = m + row * cellH + cellH / 2f
+        v.translationX = (cx - v.width / 2f).coerceIn(0f, (w0() - v.width).toFloat())
+        v.translationY = (cy - v.height / 2f).coerceIn(0f, (h0() - v.height).toFloat())
+    }
+
+    private fun w0() = saverOverlay.width
+    private fun h0() = saverOverlay.height
+
+    private fun swapSaverPositions() {
+        placeSaverBlocks(initial = false)
+        handler.postDelayed(positionTick, POSITION_MS)
     }
 
     private fun floatSpeedDp(): Float = when (prefs.saverSpeed.value) {
@@ -145,21 +171,6 @@ class MainActivity : AppCompatActivity() {
                 saverRain.step(prefs.saverSpeed.value)
                 saverRain.invalidate()
             }
-            val w = saverOverlay.width
-            val h = saverOverlay.height
-            val dt = 1f / 30f
-            for (f in floaters) {
-                var x = f.view.translationX + f.vx * dt * resources.displayMetrics.density
-                var y = f.view.translationY + f.vy * dt * resources.displayMetrics.density
-                val fw = f.view.width.coerceAtLeast(1)
-                val fh = f.view.height.coerceAtLeast(1)
-                if (x < 0) { x = 0f; f.vx = abs(f.vx) }
-                if (x + fw > w) { x = (w - fw).toFloat(); f.vx = -abs(f.vx) }
-                if (y < 0) { y = 0f; f.vy = abs(f.vy) }
-                if (y + fh > h) { y = (h - fh).toFloat(); f.vy = -abs(f.vy) }
-                f.view.translationX = x
-                f.view.translationY = y
-            }
             val now = System.currentTimeMillis()
             if (now - lastStatusText > 1000) {
                 lastStatusText = now
@@ -172,21 +183,32 @@ class MainActivity : AppCompatActivity() {
     private fun updateSaverStatusText() {
         val now = System.currentTimeMillis()
         tvSaverClock.text = SimpleDateFormat("HH:mm", Locale.US).format(Date(now))
-        tvSaverDate.text = SimpleDateFormat("EEE · d MMM", Locale.US).format(Date(now))
-        val running = bound?.services()?.allServices?.count { it.state.value == ServiceState.RUNNING } ?: 0
+        tvSaverDate.text = SimpleDateFormat("EEEE · d MMM yyyy", Locale.US).format(Date(now))
+        val svcs = bound?.services()?.allServices.orEmpty()
+        val running = svcs.count { it.state.value == ServiceState.RUNNING }
         val net = when (InternetWatchdog.status) {
             InternetWatchdog.Status.ONLINE -> "online"
-            InternetWatchdog.Status.OFFLINE -> "offline"
+            InternetWatchdog.Status.OFFLINE -> "OFFLINE"
             else -> "—"
         }
-        val batt = batteryLine()?.replace("Battery: ", "") ?: ""
-        tvSaverStatus.text = "$running services · net $net · $batt"
+        val batt = batteryLine()?.replace("Battery: ", "")?.replace("  ", "  ") ?: ""
+        val free = android.os.Environment.getExternalStorageDirectory()?.let {
+            com.printserver.core.files.StorageProvider.humanSize(it.usableSpace)
+        } ?: "?"
+        tvSaverStatus.text = buildString {
+            append("$running/${svcs.size} services running\n")
+            append("internet $net\n")
+            append("$batt\n")
+            append("uptime ${uptimeLine().substringAfter(": ")}\n")
+            append("${free} free")
+        }
     }
 
     private fun hideSaver() {
         saverOn = false
         saverOverlay.visibility = View.GONE
         handler.removeCallbacks(frameTick)
+        handler.removeCallbacks(positionTick)
         floaters.clear()
         resetIdle()
     }
@@ -464,5 +486,5 @@ class MainActivity : AppCompatActivity() {
         if (serviceBound) runCatching { unbindService(connection) }
     }
 
-    companion object { private const val IDLE_MS = 5L * 60 * 1000 }
+    companion object { private const val IDLE_MS = 5L * 60 * 1000; private const val POSITION_MS = 20_000L }
 }

@@ -17,9 +17,10 @@ class MatrixRainView @JvmOverloads constructor(
 
     private var cols = 0
     private var rows = 0
-    private val cell = 14f
-    private var brightness = FloatArray(0)
+    private val cell = 12f
+    private var rain = FloatArray(0)
     private var logoFloor = FloatArray(0)
+    private var colTint = FloatArray(0)
     private var headY = FloatArray(0)
     private var headSpeed = FloatArray(0)
     private var buffer = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
@@ -38,10 +39,11 @@ class MatrixRainView @JvmOverloads constructor(
         if (w <= 0 || h <= 0) return
         cols = (w / cell).toInt().coerceIn(8, 400)
         rows = (h / cell).toInt().coerceIn(8, 900)
-        brightness = FloatArray(cols * rows)
+        rain = FloatArray(cols * rows)
         logoFloor = FloatArray(cols * rows)
+        colTint = FloatArray(cols) { 0.82f + Math.random().toFloat() * 0.36f }
         headY = FloatArray(cols) { (Math.random() * rows).toFloat() }
-        headSpeed = FloatArray(cols) { (6f + Math.random().toFloat() * 14f) }
+        headSpeed = FloatArray(cols) { (5f + Math.random().toFloat() * 13f) }
         buffer = Bitmap.createBitmap(cols, rows, Bitmap.Config.ARGB_8888)
         pendingLogo?.let { buildLogo(it) }
     }
@@ -51,7 +53,7 @@ class MatrixRainView @JvmOverloads constructor(
         for (y in 0 until rows) {
             for (x in 0 until cols) {
                 val g = Color.green(s.getPixel(x, y))
-                logoFloor[y * cols + x] = if (g > 30) (g / 255f) * 0.38f else 0f
+                logoFloor[y * cols + x] = if (g > 26) (g / 255f) * 0.5f else 0f
             }
         }
         s.recycle()
@@ -64,15 +66,22 @@ class MatrixRainView @JvmOverloads constructor(
         lastNs = now
         val mul = when (speedPref) { 0 -> 0.5f; 2 -> 2.4f; else -> 1f }
 
-        for (i in brightness.indices) brightness[i] *= 0.94f
+        for (i in rain.indices) rain[i] *= 0.915f
 
         for (x in 0 until cols) {
             headY[x] += headSpeed[x] * mul * dt
             val yi = headY[x].toInt()
-            if (yi in 0 until rows) brightness[yi * cols + x] = 1f
+            if (yi in 0 until rows) {
+                val idx = yi * cols + x
+                rain[idx] = max(rain[idx], colTint[x])
+            }
+            if (yi in 1 until rows) {
+                val above = (yi - 1) * cols + x
+                rain[above] = max(rain[above], colTint[x] * 0.85f)
+            }
             if (yi > rows + 2) {
-                headY[x] = -(Math.random() * 24).toFloat()
-                headSpeed[x] = 6f + Math.random().toFloat() * 14f
+                headY[x] = -(Math.random() * 30).toFloat()
+                headSpeed[x] = 5f + Math.random().toFloat() * 13f
             }
         }
 
@@ -80,13 +89,16 @@ class MatrixRainView @JvmOverloads constructor(
         var i = 0
         for (y in 0 until rows) {
             for (x in 0 until cols) {
-                val v = max(brightness[i], logoFloor[i])
+                val t = colTint[x]
+                val rainV = rain[i]
+                val logoV = logoFloor[i]
+                val v = max(rainV, logoV)
                 if (v <= 0.02f) {
-                    px[i] = 0xFF000000.toInt()
+                    px[i] = 0xFF050805.toInt()
                 } else {
-                    val r = (12 * v).toInt()
-                    val g = (90 + 165 * v).toInt().coerceAtMost(255)
-                    val b = (34 * v).toInt()
+                    val r = (14 * v * t).toInt().coerceAtMost(60)
+                    val g = (70 + 185 * v * t).toInt().coerceAtMost(255)
+                    val b = (36 * v * t).toInt().coerceAtMost(140)
                     px[i] = 0xFF000000.toInt() or (r shl 16) or (g shl 8) or b
                 }
                 i++

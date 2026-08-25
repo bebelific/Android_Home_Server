@@ -158,8 +158,14 @@ class HomeServerService : Service() {
         scope.launch {
             if (enabled && svc.state.value == ServiceState.DISABLED) {
                 locks.acquire(id)
+                var ok = false
                 runCatching { svc.start(applicationContext) }
+                    .onSuccess { if (it.isSuccess) ok = true }
                     .onFailure { PrinterLog.e(TAG, "$id start failed: ${it.message}") }
+                if (!ok || svc.state.value != ServiceState.RUNNING) {
+                    runCatching { svc.stop() }
+                    locks.release(id)
+                }
             } else if (!enabled && svc.state.value != ServiceState.DISABLED) {
                 runCatching { svc.stop() }
                     .onFailure { PrinterLog.e(TAG, "$id stop failed: ${it.message}") }
@@ -171,16 +177,17 @@ class HomeServerService : Service() {
     }
 
     fun restartAll() {
-        for (svc in registry.allServices.toList()) {
-            if (svc.state.value == ServiceState.RUNNING) {
-                onToggle(svc.id, false)
-            }
-        }
         scope.launch {
-            kotlinx.coroutines.delay(800)
-            for (svc in registry.allServices.toList()) {
-                val wanted = persisted(svc.id)
-                if (wanted) onToggle(svc.id, true)
+            val wasRunning = registry.allServices.filter { it.state.value == ServiceState.RUNNING }
+            for (svc in wasRunning) {
+                onToggle(svc.id, false)
+                var waited = 0
+                while (svc.state.value != ServiceState.DISABLED && waited < 6000) {
+                    kotlinx.coroutines.delay(250); waited += 250
+                }
+            }
+            for (svc in registry.allServices) {
+                if (persisted(svc.id)) onToggle(svc.id, true)
             }
         }
     }
