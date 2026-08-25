@@ -1,11 +1,12 @@
 package com.printserver.core.camera
 
 import android.graphics.ImageFormat
-import android.graphics.Rect
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.YuvImage
 import android.hardware.Camera
-import android.view.SurfaceHolder
+import android.os.Handler
+import android.os.HandlerThread
 import com.printserver.core.common.PrinterLog
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
@@ -17,8 +18,8 @@ class CameraStreamer(private val bus: FrameBus) {
     @Volatile private var lastFrameNs = 0L
     @Volatile private var paused = false
     val isPaused: Boolean get() = paused
-    @Volatile var fpsCap: Int = 15
-    @Volatile var jpegQuality: Int = 70
+    @Volatile var fpsCap: Int = 10
+    @Volatile var jpegQuality: Int = 60
     @Volatile var facingBack: Boolean = true
     @Volatile var torchRequested: Boolean = false
     @Volatile var rotationDegrees: Int = 0
@@ -33,16 +34,32 @@ class CameraStreamer(private val bus: FrameBus) {
     private var prevLuma: IntArray? = null
     private var lastMotionNs = 0L
 
+    private var cameraThread: HandlerThread? = null
+    private var cameraHandler: Handler? = null
+
     val isRunning: Boolean get() = camera != null
     val resolution: String get() = if (width > 0) "${width}x${height}" else "-"
 
     fun start() {
         if (camera != null) return
-        val cam = openCamera() ?: throw IllegalStateException("No camera available")
+        if (cameraThread == null || cameraThread!!.isAlive == false) {
+            cameraThread = HandlerThread("CamStreamer").apply { start() }
+            cameraHandler = Handler(cameraThread!!.looper)
+        }
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var opened: Camera? = null
+        var err: Exception? = null
+        cameraHandler!!.post {
+            try { opened = openCamera() } catch (e: Exception) { err = e }
+            latch.countDown()
+        }
+        latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+        err?.let { throw it }
+        val cam = opened ?: throw IllegalStateException("No camera available")
         try {
             configure(cam)
             camera = cam
-            PrinterLog.i(TAG, "Started ${if (facingBack) "back" else "front"} $width x $height")
+            PrinterLog.i(TAG, "Started ${if (facingBack) "back" else "front"} $width x $height rot=$rotationDegrees")
         } catch (e: Exception) {
             runCatching { cam.release() }
             throw e
@@ -76,12 +93,15 @@ class CameraStreamer(private val bus: FrameBus) {
         val id = pickId()
         val info = Camera.CameraInfo()
         Camera.getCameraInfo(id, info)
-        rotationDegrees = info.orientation
+        rotationDegrees = when (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            true -> (info.orientation + 180) % 360
+            false -> info.orientation
+        }
         val p = cam.parameters
         val sizes = p.supportedPreviewSizes.orEmpty()
             .filter { it.width <= MAX_WIDTH && it.height <= MAX_HEIGHT }
             .sortedByDescending { it.width * it.height }
-        val size = sizes.firstOrNull() ?: p.previewSize
+        val size = sizes.lastOrNull { it.width >= 320 } ?: sizes.firstOrNull() ?: p.previewSize
         width = size.width; height = size.height
         p.setPreviewSize(width, height)
         runCatching { p.setPreviewFormat(ImageFormat.NV21) }
@@ -89,14 +109,8 @@ class CameraStreamer(private val bus: FrameBus) {
         cam.parameters = p
         cam.setPreviewCallbackWithBuffer(null)
 
-        runCatching {
-            val tex = android.graphics.SurfaceTexture(0)
-            tex.detachFromGLContext()
-            cam.setPreviewTexture(tex)
-        }
-
         val bufSize = width * height * 3 / 2 + 1024
-        repeat(5) { cam.addCallbackBuffer(ByteArray(bufSize)) }
+        repeat(4) { cam.addCallbackBuffer(ByteArray(bufSize)) }
         cam.setPreviewCallbackWithBuffer { data, camRef ->
             try {
                 if (!paused) maybePublish(data, camRef)
@@ -125,11 +139,11 @@ class CameraStreamer(private val bus: FrameBus) {
         val out = ByteArrayOutputStream(frame.size / 2)
         yuv.compressToJpeg(Rect(0, 0, fw, fh), jpegQuality.coerceIn(30, 95), out)
         val jpeg = out.toByteArray()
-        if (motionEnabled) detectMotion(jpeg, fw, fh)
+        if (motionEnabled) detectMotion(jpeg)
         bus.publish(jpeg)
     }
 
-    private fun detectMotion(jpeg: ByteArray, w: Int, h: Int) {
+    private fun detectMotion(jpeg: ByteArray) {
         if (System.nanoTime() - lastMotionNs < 60_000_000_000L) return
         val bmp = android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return
         val small = android.graphics.Bitmap.createScaledBitmap(bmp, 32, 24, true)
@@ -151,7 +165,7 @@ class CameraStreamer(private val bus: FrameBus) {
             motionCount++
             lastMotionMs = System.currentTimeMillis()
             lastMotionNs = System.nanoTime()
-            PrinterLog.i(TAG, "Motion detected (diff=$mean)")
+            PrinterLog.i(TAG, "Motion detected")
             if (motionSave) onMotionSnapshot?.invoke(jpeg)
         }
     }
@@ -191,13 +205,8 @@ class CameraStreamer(private val bus: FrameBus) {
         }
     }
 
-    fun pause() {
-        paused = true
-    }
-
-    fun resume() {
-        paused = false
-    }
+    fun pause() { paused = true }
+    fun resume() { paused = false }
 
     fun setTorch(on: Boolean): Boolean {
         torchRequested = on
@@ -219,13 +228,15 @@ class CameraStreamer(private val bus: FrameBus) {
     }
 
     fun stop() {
-        camera?.let { c ->
-            runCatching { c.stopPreview() }
-            runCatching { c.setPreviewCallbackWithBuffer(null) }
-            runCatching { c.release() }
+        cameraHandler?.post {
+            camera?.let { c ->
+                runCatching { c.stopPreview() }
+                runCatching { c.setPreviewCallbackWithBuffer(null) }
+                runCatching { c.release() }
+            }
+            camera = null
+            width = 0; height = 0
         }
-        camera = null
-        width = 0; height = 0
         PrinterLog.i(TAG, "Stopped")
     }
 
@@ -233,6 +244,5 @@ class CameraStreamer(private val bus: FrameBus) {
         private const val TAG = "CamStreamer"
         private const val MAX_WIDTH = 1280
         private const val MAX_HEIGHT = 720
-        private const val MOTION_TAG = "Motion"
     }
 }

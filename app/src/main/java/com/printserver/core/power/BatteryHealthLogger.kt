@@ -18,14 +18,15 @@ import java.util.Date
 import java.util.Locale
 
 class BatteryHealthLogger(private val context: Context, private val logFile: File) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var scope: CoroutineScope? = null
     private val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     @Volatile private var running = false
 
     fun start() {
         if (running) return
         running = true
-        scope.launch {
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        scope!!.launch {
             while (isActive && running) {
                 sample()
                 delay(INTERVAL_MS)
@@ -36,7 +37,7 @@ class BatteryHealthLogger(private val context: Context, private val logFile: Fil
 
     fun stop() {
         running = false
-        scope.cancel()
+        scope?.cancel(); scope = null
     }
 
     data class Sample(

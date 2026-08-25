@@ -37,8 +37,8 @@ class PrintActivity : ServiceBoundActivity() {
         findViewById<Button>(R.id.buttonReprint).setOnClickListener {
             val b = android.widget.Toast.makeText(this, "Sending...", android.widget.Toast.LENGTH_SHORT)
             b.show()
-            lifecycleScope.launch {
-                val r = print()?.reprintLast()
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val r = try { print()?.reprintLast() } catch (e: Exception) { Result.failure(e) }
                 android.widget.Toast.makeText(
                     this@PrintActivity,
                     r?.fold({ it }, { "Failed: ${it.message}" }) ?: "Service unavailable",

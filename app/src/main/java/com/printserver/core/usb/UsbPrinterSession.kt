@@ -13,13 +13,15 @@ class UsbPrinterSession(
         get() = "if#$interfaceId ep=0x%02X".format(outEndpoint.address)
 
     fun write(buffer: ByteArray, offset: Int, length: Int, timeoutMs: Int = TRANSFER_TIMEOUT_MS): Int {
-        return if (Build.VERSION.SDK_INT >= 26 || offset == 0) {
+        val r = if (Build.VERSION.SDK_INT >= 26 || offset == 0) {
             connection.bulkTransfer(outEndpoint, buffer, offset, length, timeoutMs)
         } else {
             val tmp = ByteArray(length)
             System.arraycopy(buffer, offset, tmp, 0, length)
             connection.bulkTransfer(outEndpoint, tmp, length, timeoutMs)
         }
+        if (r <= 0 && length > 0) return -1
+        return r
     }
 
     fun close() {

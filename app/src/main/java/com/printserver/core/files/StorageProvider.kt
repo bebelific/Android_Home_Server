@@ -59,5 +59,5 @@ object StorageProvider {
 
     fun htmlEscape(s: String): String = s
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        .replace("\"", "&quot;")
+        .replace("\"", "&quot;").replace("'", "&#39;")
 }

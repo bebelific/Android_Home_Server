@@ -47,7 +47,7 @@ class HomeServerService : Service() {
 
     init { isRunning = true }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var prefs: PreferencesManager
     private lateinit var locks: PowerLocks
     private lateinit var battery: BatteryHealthLogger

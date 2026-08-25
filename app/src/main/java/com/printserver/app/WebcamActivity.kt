@@ -58,8 +58,15 @@ class WebcamActivity : ServiceBoundActivity() {
         sbQuality = findViewById(R.id.sbQuality)
         tvFps = findViewById(R.id.tvFps)
         tvQuality = findViewById(R.id.tvQuality)
+        swMotion = findViewById(R.id.swMotion)
+        swMotionSave = findViewById(R.id.swMotionSave)
 
         prefs = PreferencesManager(this)
+
+        swMotion.isChecked = prefs.motionEnabled.value
+        swMotion.setOnCheckedChangeListener { _, c -> prefs.setMotionEnabled(c); applyMotionFlags() }
+        swMotionSave.isChecked = prefs.motionSave.value
+        swMotionSave.setOnCheckedChangeListener { _, c -> prefs.setMotionSave(c); applyMotionFlags() }
 
         sbFps.max = 25
         sbFps.progress = prefs.mjpegFps.value - 5
@@ -208,5 +215,5 @@ class WebcamActivity : ServiceBoundActivity() {
     }
 
     override fun onPause() { previewActive = false; handler.removeCallbacks(statusTick); super.onPause() }
-    override fun onResume() { super.onResume(); bindTorch(); bindFacing(); handler.post(statusTick) }
+    override fun onResume() { super.onResume(); bindTorch(); bindFacing(); handler.post(statusTick); if (!previewActive) { previewActive = true; lifecycleScope.launch { previewLoop() } } }
 }

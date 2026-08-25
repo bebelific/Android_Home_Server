@@ -5,6 +5,7 @@ import com.printserver.core.common.ServiceRegistry
 import com.printserver.core.common.ServiceState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -16,14 +17,16 @@ class Watchdog(
     private val battery: BatteryHealthLogger,
     private val onCritical: () -> Unit,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var job: Job? = null
+    private var scope: CoroutineScope? = null
     @Volatile private var running = false
     private var lastDeepCheck = 0L
 
     fun start() {
         if (running) return
         running = true
-        scope.launch {
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        job = scope!!.launch {
             while (isActive && running) {
                 delay(INTERVAL_MS)
                 checkServices()
@@ -38,7 +41,8 @@ class Watchdog(
 
     fun stop() {
         running = false
-        scope.cancel()
+        job?.cancel(); job = null
+        scope?.cancel(); scope = null
     }
 
     private suspend fun checkServices() {

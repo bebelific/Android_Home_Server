@@ -82,8 +82,8 @@ class PreferencesManager(context: Context) {
     private val _shareRoot = MutableStateFlow(prefs.getString(PrefKeys.SHARE_ROOT, "") ?: "")
     private val _cameraFacingBack = MutableStateFlow(prefs.getBoolean(PrefKeys.CAMERA_FACING_BACK, true))
     private val _cameraTorch = MutableStateFlow(prefs.getBoolean(PrefKeys.CAMERA_TORCH, false))
-    private val _mjpegQuality = MutableStateFlow(prefs.getInt(PrefKeys.MJPEG_QUALITY, 70))
-    private val _mjpegFps = MutableStateFlow(prefs.getInt(PrefKeys.MJPEG_FPS, 15))
+    private val _mjpegQuality = MutableStateFlow(prefs.getInt(PrefKeys.MJPEG_QUALITY, 60))
+    private val _mjpegFps = MutableStateFlow(prefs.getInt(PrefKeys.MJPEG_FPS, 10))
 
     private val _backupEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.BACKUP_ENABLED, false))
     private val _backupIntervalMin = MutableStateFlow(prefs.getInt(PrefKeys.BACKUP_INTERVAL_MIN, 15))

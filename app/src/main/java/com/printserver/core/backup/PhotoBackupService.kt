@@ -123,10 +123,7 @@ class PhotoBackupService(
     override fun isHealthy(): Boolean = _state.value == ServiceState.RUNNING
 
     fun runNow(context: Context) {
-        if (!busy.compareAndSet(false, true)) return
-        scope.launch {
-            try { runCycle(context) } finally { busy.set(false) }
-        }
+        scope?.launch { runCycle(context) }
     }
 
     suspend fun runCycle(context: Context) {
@@ -190,8 +187,9 @@ class PhotoBackupService(
                             .onFailure { fileOk = false }
                         tmp
                     }
-                    if (fileOk && !DriveSaf.writeAppend(context, drive, item.name, mime(item.name), payload)) {
+                    if (!DriveSaf.writeAppend(context, drive, item.name, mime(item.name), payload)) {
                         lastError = "drive upload failed: ${item.name}"
+                        fileOk = false
                     }
                 }
                 if (usbDest != null) {

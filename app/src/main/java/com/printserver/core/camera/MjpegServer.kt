@@ -65,11 +65,12 @@ class MjpegServer(
     private fun viewPage(): NanoHTTPD.Response {
         val html = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AndroidHomeServer cam</title>
+<title>Bebelific Homeserver cam</title>
 <style>body{background:#111;color:#eee;font-family:sans-serif;margin:0;text-align:center}
-img{width:100%;max-height:82vh;object-fit:contain;background:#000}
+#wrap{width:100vh;margin:0 auto;position:relative}
+img{width:100%;transform:rotate(90deg);transform-origin:center;background:#000}
 #st{padding:6px;font-size:13px;color:#9c9}</style></head><body>
-<img id="i" alt="camera"><div id="st">connecting...</div>
+<div id="wrap"><img id="i" alt="camera"></div><div id="st">connecting...</div>
 <script>
 var i=document.getElementById('i'),st=document.getElementById('st'),mode='stream',busy=false;
 function poll(){
@@ -81,7 +82,7 @@ function poll(){
     if(i.src)URL.revokeObjectURL(i.src);
     i.src=URL.createObjectURL(b);
     st.textContent='live (snapshot mode)';
-    setTimeout(poll,120);
+    setTimeout(poll,150);
   }).catch(function(){
     busy=false;
     st.textContent='camera offline - retrying...';
@@ -108,6 +109,7 @@ setTimeout(function(){
         val input: java.io.InputStream = object : java.io.InputStream() {
             private var buf: ByteArray? = null
             private var pos = 0
+            private var closed = false
             override fun read(): Int {
                 while (true) {
                     val b = buf
@@ -116,7 +118,7 @@ setTimeout(function(){
                         pos++
                         return v
                     }
-                    if (http == null) return -1
+                    if (closed || http == null) return -1
                     val frame = sub.take(500)
                     if (frame != null) {
                         val head = "--$BOUNDARY\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.size}\r\n\r\n".toByteArray()
@@ -124,6 +126,11 @@ setTimeout(function(){
                         pos = 0
                     }
                 }
+            }
+            override fun close() {
+                closed = true
+                bus.unsubscribe(sub)
+                runCatching { super.close() }
             }
         }
         return NanoHTTPD.newChunkedResponse(

@@ -1,8 +1,8 @@
 package com.printserver.core.network
 
 import com.printserver.core.common.PrinterLog
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.io.File
@@ -11,6 +11,7 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -24,12 +25,11 @@ class DnsFilterServer(
     val total = AtomicLong()
     val blocked = AtomicLong()
     val pcBlocked = AtomicLong()
-    val perClient = java.util.concurrent.ConcurrentHashMap<String, LongArray>()
-    val lastBlocked = object : AtomicReference<ArrayDeque<String>>(ArrayDeque()) {}
+    val perClient = ConcurrentHashMap<String, LongArray>()
+    val lastBlocked = AtomicReference(ArrayDeque<String>())
     @Volatile var running = false
         private set
 
-    private val socket = AtomicBoolean(false)
     private var ds: DatagramSocket? = null
     private var scope: CoroutineScope? = null
 
@@ -40,13 +40,10 @@ class DnsFilterServer(
         s.reuseAddress = true
         s.bind(InetSocketAddress(p))
         ds = s
-        socket.set(true)
         running = true
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        repeat(3) {
-            scope!!.launch(Dispatchers.IO) { receiveLoop(s) }
-        }
-        PrinterLog.i(TAG, "DNS filter listening on 0.0.0.0:$p (blocklist=${blocklist().size})")
+        repeat(3) { scope!!.launch(Dispatchers.IO) { receiveLoop(s) } }
+        PrinterLog.i(TAG, "DNS filter listening on 0.0.0.0:$p (blocklist=${blocklist().size}, upstream=$upstream)")
     }
 
     fun stop() {
@@ -61,18 +58,14 @@ class DnsFilterServer(
         val buf = ByteArray(1500)
         while (running && !s.isClosed) {
             val packet = DatagramPacket(buf, buf.size)
-            try {
-                s.receive(packet)
-            } catch (_: Exception) {
-                if (running) continue else return
-            }
+            try { s.receive(packet) } catch (_: Exception) { if (running) continue else return }
             val data = packet.data.copyOf(packet.length)
             val client = packet.socketAddress
-            scope!!.launch(Dispatchers.IO) { handle(data, client, s) }
+            scope?.launch(Dispatchers.IO) { handle(data, client, s) }
         }
     }
 
-    private fun handle(query: ByteArray, client: SocketAddress, listenSocket: DatagramSocket) {
+    private fun handle(query: ByteArray, client: SocketAddress, sock: DatagramSocket) {
         total.incrementAndGet()
         if (query.size < 17) return
         val parsed = parseQname(query) ?: return
@@ -85,81 +78,80 @@ class DnsFilterServer(
         counters[0]++
         val parental = extraCheck?.invoke(clientIp, name) == true
         if (parental) pcBlocked.incrementAndGet()
-        if (parental || blocklist().contains(name)) {
+        val bl = blocklist()
+        val isBlocked = parental || bl.contains(name) || bl.any { d -> name == d || name.endsWith(".$d") }
+        if (isBlocked) {
             if (!parental) blocked.incrementAndGet() else counters[1]++
             noteBlocked(if (parental) "[$clientIp] $name" else name)
             val resp = if (!parental && qtype == 1) blockedAAnswer(query) else nxdomainAnswer(query)
-            send(resp, client, listenSocket)
+            send(resp, client, sock)
             return
         }
+        var up: DatagramSocket? = null
         try {
-            val up = DatagramSocket()
+            up = DatagramSocket()
             up.soTimeout = 4000
             up.send(DatagramPacket(query, query.size, InetAddress.getByName(upstream), 53))
             val rb = ByteArray(1500)
             val rp = DatagramPacket(rb, rb.size)
             up.receive(rp)
-            up.close()
-            send(rb.copyOf(rp.length), client, listenSocket)
+            send(rb.copyOf(rp.length), client, sock)
         } catch (e: Exception) {
-            send(nxdomainAnswer(query), client, listenSocket)
+            send(nxdomainAnswer(query), client, sock)
+        } finally {
+            runCatching { up?.close() }
         }
     }
 
     private fun send(data: ByteArray, to: SocketAddress, s: DatagramSocket) {
-        try {
-            s.send(DatagramPacket(data, data.size, to))
-        } catch (_: Exception) {}
+        try { s.send(DatagramPacket(data, data.size, to)) } catch (_: Exception) {}
     }
 
     private fun noteBlocked(name: String) {
         val q = lastBlocked.get()
-        synchronized(q) {
-            q.addFirst(name)
-            while (q.size > 25) q.removeLast()
-        }
+        synchronized(q) { q.addFirst(name); while (q.size > 25) q.removeLast() }
     }
 
     fun recentBlocked(): List<String> = synchronized(lastBlocked.get()) { lastBlocked.get().toList() }
 
+    private fun parseQname(query: ByteArray): Pair<String, Int>? {
+        var i = 12
+        val sb = StringBuilder()
+        while (i < query.size) {
+            val len = query[i].toInt() and 0xFF
+            if (len == 0) { i += 1; break }
+            if (i + len >= query.size) return null
+            if (sb.isNotEmpty()) sb.append('.')
+            sb.append(String(query, i + 1, len, Charsets.US_ASCII).lowercase())
+            i += len + 1
+        }
+        return if (sb.isEmpty()) null else sb.toString() to i
+    }
+
+    private fun header(query: ByteArray, rcode: Int, ancount: Int): ByteArray {
+        val r = query.copyOf()
+        r[2] = 0x81.toByte()
+        r[3] = ((rcode and 0x0F) or 0x80).toByte()
+        r[6] = ((ancount shr 8) and 0xFF).toByte()
+        r[7] = (ancount and 0xFF).toByte()
+        r[8] = 0; r[9] = 0; r[10] = 0; r[11] = 0
+        return r
+    }
+
+    private fun blockedAAnswer(query: ByteArray): ByteArray {
+        val base = header(query, 0, 1)
+        val answer = byteArrayOf(
+            0xC0.toByte(), 0x0C.toByte(),
+            0, 1, 0, 1,
+            0, 0, 1, 44,
+            0, 4, 0, 0, 0, 0,
+        )
+        return base + answer
+    }
+
+    private fun nxdomainAnswer(query: ByteArray): ByteArray = header(query, 3, 0)
+
     companion object {
         private const val TAG = "DnsFilter"
-
-        fun parseQname(query: ByteArray): Pair<String, Int>? {
-            var i = 12
-            val sb = StringBuilder()
-            while (i < query.size) {
-                val len = query[i].toInt() and 0xFF
-                if (len == 0) { i += 1; break }
-                if (i + len >= query.size) return null
-                if (sb.isNotEmpty()) sb.append('.')
-                sb.append(String(query, i + 1, len, Charsets.US_ASCII).lowercase())
-                i += len + 1
-            }
-            return if (sb.isEmpty()) null else sb.toString() to i
-        }
-
-        private fun header(query: ByteArray, rcode: Int, ancount: Int): ByteArray {
-            val r = query.copyOf()
-            r[2] = 0x81.toByte()
-            r[3] = ((rcode and 0x0F) or 0x80).toByte()
-            r[6] = ((ancount shr 8) and 0xFF).toByte()
-            r[7] = (ancount and 0xFF).toByte()
-            r[8] = 0; r[9] = 0; r[10] = 0; r[11] = 0
-            return r
-        }
-
-        fun blockedAAnswer(query: ByteArray): ByteArray {
-            val base = header(query, 0, 1)
-            val answer = byteArrayOf(
-                0xC0.toByte(), 0x0C.toByte(),
-                0, 1, 0, 1,
-                0, 0, 1, 44,
-                0, 4, 0, 0, 0, 0,
-            )
-            return base + answer
-        }
-
-        fun nxdomainAnswer(query: ByteArray): ByteArray = header(query, 3, 0)
     }
 }
