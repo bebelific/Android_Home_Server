@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="PORTS (apply after Restart)"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/RowLabel" android:text="Print (raw 9100)"/>
+            <EditText android:id="@+id/etPrintPort" style="@style/PortEdit" android:inputType="number"/>
+        </LinearLayout>
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/RowLabel" android:text="WebDAV / files"/>
+            <EditText android:id="@+id/etWebdavPort" style="@style/PortEdit" android:inputType="number"/>
+        </LinearLayout>
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/RowLabel" android:text="FTP"/>
+            <EditText android:id="@+id/etFtpPort" style="@style/PortEdit" android:inputType="number"/>
+        </LinearLayout>
+        <LinearLayout style="@style/Row" android:layout_marginBottom="4dp">
+            <TextView style="@style/RowLabel" android:text="MJPEG webcam"/>
+            <EditText android:id="@+id/etMjpegPort" style="@style/PortEdit" android:inputType="number"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="POWER"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/tvChargeLimit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Charge limit: 80%"/>
+
+        <SeekBar
+            android:id="@+id/sbChargeLimit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="50"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Thermal throttling"/>
+
+            <Switch
+                android:id="@+id/swThermalThrottle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ACCESS"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"/>
+
+        <EditText
+            android:id="@+id/etUsername"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Username"/>
+
+        <EditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Password"
+            android:inputType="textPassword"/>
+
+        <Button
+            android:id="@+id/btnBatteryWhitelist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Request battery-optimization exemption"/>
+
+        <Button
+            android:id="@+id/btnOemWhitelist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Open OEM battery panel"/>
+
+        <Button
+            android:id="@+id/btnFactoryReset"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Factory reset settings"/>
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AndroidHomeServer</string>
+    <string name="notif_channel">Home Server</string>
+    <string name="notif_title">AndroidHomeServer running</string>
+    <string name="notif_text">Tap to open dashboard</string>
+    <string name="title_settings">Settings</string>
+    <string name="title_logs">Logs</string>
+</resources>
