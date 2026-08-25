@@ -19,6 +19,7 @@
     <uses-permission android:name="android.permission.FLASHLIGHT" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <application
         android:name=".PrintServerApp"
@@ -50,6 +51,7 @@
         <activity android:name=".MediaActivity" android:exported="false" android:label="@string/title_media" />
         <activity android:name=".BackupActivity" android:exported="false" android:label="@string/title_backup" />
         <activity android:name=".AdBlockActivity" android:exported="false" android:label="@string/title_adblock" />
+        <activity android:name=".ParentalActivity" android:exported="false" android:label="@string/title_parental" />
         <activity android:name=".PrintActivity" android:exported="false" android:label="@string/title_print" />
         <activity android:name=".DiscoveryActivity" android:exported="false" android:label="@string/title_discovery" />
         <activity android:name=".AboutActivity" android:exported="false" android:label="@string/title_about" />

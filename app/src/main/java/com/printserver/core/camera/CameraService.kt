@@ -34,7 +34,10 @@ class CameraService(
         _state.value = ServiceState.STARTING
         return try {
             applyPrefsToStreamer()
-            server = MjpegServer({ prefs.mjpegPort.value }, bus, streamer)
+            server = MjpegServer(
+                { prefs.mjpegPort.value }, bus, streamer,
+                { prefs.username.value }, { prefs.passwordHash.value }
+            )
             server?.start()
             startMonitor()
             _state.value = ServiceState.RUNNING

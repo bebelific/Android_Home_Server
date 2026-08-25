@@ -41,6 +41,9 @@ class PhotoBackupService(
     @Volatile var lastRunMs: Long = 0; private set
     @Volatile var lastCopied: Int = 0; private set
     @Volatile var totalCopied: Int = 0; private set
+    @Volatile var lastUsbCopied: Int = 0; private set
+    @Volatile var totalUsbCopied: Int = 0; private set
+    @Volatile var usbTarget: String? = null; private set
     @Volatile var lastError: String? = null; private set
 
     fun sourceDir(): File {
@@ -116,6 +119,29 @@ class PhotoBackupService(
                     DriveSaf.writeAppend(context, drive, f.name, mime(f.name), out)
                 }
             }
+
+            var usbCopied = 0
+            usbTarget = null
+            if (prefs.backupUseUsb.value) {
+                val usb = com.printserver.core.files.UsbStorage.firstWritable(context)
+                if (usb == null) {
+                    lastError = "USB drive selected but none writable (plug in OTG drive; on Android 10+ grant All-files access)"
+                } else {
+                    usbTarget = usb.path
+                    val usbDest = File(File(usb.path, "PhotoBackup"), device)
+                    usbDest.mkdirs()
+                    for (f in candidates) {
+                        val out = File(usbDest, f.name)
+                        if (!out.exists() || out.length() != f.length()) {
+                            runCatching { f.copyTo(out, overwrite = true) }
+                                .onSuccess { usbCopied++ }
+                                .onFailure { lastError = "usb: ${it.message}" }
+                        }
+                    }
+                }
+            }
+            lastUsbCopied = usbCopied
+            totalUsbCopied += usbCopied
             lastCopied = copied
             totalCopied += copied
             lastRunMs = System.currentTimeMillis() - 1000

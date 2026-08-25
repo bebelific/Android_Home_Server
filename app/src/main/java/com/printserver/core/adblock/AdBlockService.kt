@@ -79,9 +79,18 @@ class AdBlockService(
 
     private fun bindServer(port: Int) {
         server?.stop()
-        server = DnsFilterServer({ port }, { blockset })
+        server = DnsFilterServer(
+            { port },
+            { blockset },
+            extraCheck = { client, domain ->
+                com.printserver.core.adblock.ParentalControl.evaluate(prefs, client, domain).blocked
+            }
+        )
         server?.start()
     }
+
+    fun pcBlockedCount(): Long = server?.pcBlocked?.get() ?: 0
+    fun clientStats(): Map<String, LongArray> = server?.perClient?.toMap() ?: emptyMap()
 
     private fun liftPortRestriction(): Boolean = runCatching {
         val p = ProcessBuilder("su", "-c", "echo 0 > /proc/sys/net/ipv4/ip_unprivileged_port_start")

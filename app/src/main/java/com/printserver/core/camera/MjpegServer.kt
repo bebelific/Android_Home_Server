@@ -8,6 +8,8 @@ class MjpegServer(
     private val port: () -> Int,
     private val bus: FrameBus,
     private val streamer: CameraStreamer,
+    private val username: () -> String = { "" },
+    private val passwordHash: () -> String = { "" },
 ) {
     companion object {
         const val BOUNDARY = "androidhomeserverframe"
@@ -33,12 +35,31 @@ class MjpegServer(
         PrinterLog.i(TAG, "Stopped")
     }
 
-    private fun handle(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = when (session.uri) {
-        "/", "/view" -> viewPage()
-        "/stream", "/video.mjpg" -> streamResponse()
-        "/snapshot.jpg" -> snapshot()
-        "/status" -> statusJson()
-        else -> plain(NanoHTTPD.Response.Status.NOT_FOUND, "not found")
+    private fun handle(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response {
+        val hash = passwordHash()
+        if (hash.isNotBlank() && !checkAuth(session)) {
+            return plain(NanoHTTPD.Response.Status.UNAUTHORIZED, "auth required").apply {
+                addHeader("WWW-Authenticate", "Basic realm=\"HomeServer cam\"")
+            }
+        }
+        return when (session.uri) {
+            "/", "/view" -> viewPage()
+            "/stream", "/video.mjpg" -> streamResponse()
+            "/snapshot.jpg" -> snapshot()
+            "/status" -> statusJson()
+            else -> plain(NanoHTTPD.Response.Status.NOT_FOUND, "not found")
+        }
+    }
+
+    private fun checkAuth(session: NanoHTTPD.IHTTPSession): Boolean {
+        val header = session.headers["authorization"] ?: return false
+        if (!header.startsWith("Basic ", true)) return false
+        return try {
+            val decoded = String(android.util.Base64.decode(header.substring(6).trim(), android.util.Base64.NO_WRAP), Charsets.UTF_8)
+            decoded.substringBefore(':') == username() &&
+                com.printserver.core.common.PreferencesManager.sha256(decoded.substringAfter(':', ""))
+                    .equals(passwordHash(), ignoreCase = true)
+        } catch (_: Exception) { false }
     }
 
     private fun viewPage(): NanoHTTPD.Response {

@@ -31,6 +31,17 @@ object PrefKeys {
     const val PRINT_ARCHIVE = "print_archive"
     const val ADBLOCK_ENABLED = "adblock_enabled"
     const val ADBLOCK_PORT = "adblock_port"
+    const val BACKUP_USE_USB = "backup_use_usb"
+    const val NET_WATCH_ENABLED = "net_watch_enabled"
+    const val DISPLAY_KEEP_ON = "display_keep_on"
+    const val PC_ENABLED = "pc_enabled"
+    const val PC_DEVICES = "pc_devices"
+    const val PC_BLOCK_ADULT = "pc_block_adult"
+    const val PC_BLOCK_SOCIAL = "pc_block_social"
+    const val PC_SCHEDULE_ENABLED = "pc_schedule_enabled"
+    const val PC_SCHEDULE_START = "pc_schedule_start"
+    const val PC_SCHEDULE_END = "pc_schedule_end"
+    const val PC_PAUSE_UNTIL = "pc_pause_until"
 }
 
 class PreferencesManager(context: Context) {
@@ -66,6 +77,17 @@ class PreferencesManager(context: Context) {
     private val _printArchive = MutableStateFlow(prefs.getBoolean(PrefKeys.PRINT_ARCHIVE, false))
     private val _adblockEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.ADBLOCK_ENABLED, false))
     private val _adblockPort = MutableStateFlow(prefs.getInt(PrefKeys.ADBLOCK_PORT, 53))
+    private val _backupUseUsb = MutableStateFlow(prefs.getBoolean(PrefKeys.BACKUP_USE_USB, false))
+    private val _netWatchEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.NET_WATCH_ENABLED, false))
+    private val _displayKeepOn = MutableStateFlow(prefs.getBoolean(PrefKeys.DISPLAY_KEEP_ON, false))
+    private val _pcEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_ENABLED, false))
+    private val _pcDevices = MutableStateFlow(prefs.getString(PrefKeys.PC_DEVICES, "") ?: "")
+    private val _pcBlockAdult = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_BLOCK_ADULT, true))
+    private val _pcBlockSocial = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_BLOCK_SOCIAL, false))
+    private val _pcScheduleEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_SCHEDULE_ENABLED, false))
+    private val _pcScheduleStart = MutableStateFlow(prefs.getString(PrefKeys.PC_SCHEDULE_START, "21:00") ?: "21:00")
+    private val _pcScheduleEnd = MutableStateFlow(prefs.getString(PrefKeys.PC_SCHEDULE_END, "07:00") ?: "07:00")
+    private val _pcPauseUntil = MutableStateFlow(prefs.getLong(PrefKeys.PC_PAUSE_UNTIL, 0L))
 
     val printServerEnabled: StateFlow<Boolean> = _printServerEnabled.asStateFlow()
     val fileSharingEnabled: StateFlow<Boolean> = _fileSharingEnabled.asStateFlow()
@@ -96,6 +118,17 @@ class PreferencesManager(context: Context) {
     val printArchive: StateFlow<Boolean> = _printArchive.asStateFlow()
     val adblockEnabled: StateFlow<Boolean> = _adblockEnabled.asStateFlow()
     val adblockPort: StateFlow<Int> = _adblockPort.asStateFlow()
+    val backupUseUsb: StateFlow<Boolean> = _backupUseUsb.asStateFlow()
+    val netWatchEnabled: StateFlow<Boolean> = _netWatchEnabled.asStateFlow()
+    val displayKeepOn: StateFlow<Boolean> = _displayKeepOn.asStateFlow()
+    val pcEnabled: StateFlow<Boolean> = _pcEnabled.asStateFlow()
+    val pcDevices: StateFlow<String> = _pcDevices.asStateFlow()
+    val pcBlockAdult: StateFlow<Boolean> = _pcBlockAdult.asStateFlow()
+    val pcBlockSocial: StateFlow<Boolean> = _pcBlockSocial.asStateFlow()
+    val pcScheduleEnabled: StateFlow<Boolean> = _pcScheduleEnabled.asStateFlow()
+    val pcScheduleStart: StateFlow<String> = _pcScheduleStart.asStateFlow()
+    val pcScheduleEnd: StateFlow<String> = _pcScheduleEnd.asStateFlow()
+    val pcPauseUntil: StateFlow<Long> = _pcPauseUntil.asStateFlow()
 
     fun setPrintServerEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PRINT_SERVER_ENABLED, v).apply(); _printServerEnabled.value = v }
     fun setFileSharingEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.FILE_SHARING_ENABLED, v).apply(); _fileSharingEnabled.value = v }
@@ -130,6 +163,17 @@ class PreferencesManager(context: Context) {
     fun setPrintArchive(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PRINT_ARCHIVE, v).apply(); _printArchive.value = v }
     fun setAdblockEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.ADBLOCK_ENABLED, v).apply(); _adblockEnabled.value = v }
     fun setAdblockPort(v: Int) { val c = v.coerceIn(53, 65535); prefs.edit().putInt(PrefKeys.ADBLOCK_PORT, c).apply(); _adblockPort.value = c }
+    fun setBackupUseUsb(v: Boolean) { prefs.edit().putBoolean(PrefKeys.BACKUP_USE_USB, v).apply(); _backupUseUsb.value = v }
+    fun setNetWatchEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.NET_WATCH_ENABLED, v).apply(); _netWatchEnabled.value = v }
+    fun setDisplayKeepOn(v: Boolean) { prefs.edit().putBoolean(PrefKeys.DISPLAY_KEEP_ON, v).apply(); _displayKeepOn.value = v }
+    fun setPcEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_ENABLED, v).apply(); _pcEnabled.value = v }
+    fun setPcDevices(v: String) { prefs.edit().putString(PrefKeys.PC_DEVICES, v).apply(); _pcDevices.value = v }
+    fun setPcBlockAdult(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_BLOCK_ADULT, v).apply(); _pcBlockAdult.value = v }
+    fun setPcBlockSocial(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_BLOCK_SOCIAL, v).apply(); _pcBlockSocial.value = v }
+    fun setPcScheduleEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_SCHEDULE_ENABLED, v).apply(); _pcScheduleEnabled.value = v }
+    fun setPcScheduleStart(v: String) { prefs.edit().putString(PrefKeys.PC_SCHEDULE_START, v).apply(); _pcScheduleStart.value = v }
+    fun setPcScheduleEnd(v: String) { prefs.edit().putString(PrefKeys.PC_SCHEDULE_END, v).apply(); _pcScheduleEnd.value = v }
+    fun setPcPauseUntil(v: Long) { prefs.edit().putLong(PrefKeys.PC_PAUSE_UNTIL, v).apply(); _pcPauseUntil.value = v }
 
     companion object {
         fun sha256(s: String): String = try {

@@ -39,6 +39,27 @@ class BackupActivity : ServiceBoundActivity() {
             if (b == null) Toast.makeText(this, "Enable Photo Backup first", Toast.LENGTH_SHORT).show()
             else { b.runNow(applicationContext); Toast.makeText(this, "Backup cycle started", Toast.LENGTH_SHORT).show() }
         }
+
+        val prefs = com.printserver.core.common.PreferencesManager(this)
+        val swUsb = findViewById<android.widget.Switch>(R.id.swUsb)
+        swUsb.isChecked = prefs.backupUseUsb.value
+        swUsb.setOnCheckedChangeListener { _, c -> prefs.setBackupUseUsb(c); refresh() }
+        val btnAllFiles = findViewById<Button>(R.id.buttonAllFiles)
+        if (android.os.Build.VERSION.SDK_INT >= 30 &&
+            !android.os.Environment.isExternalStorageManager()
+        ) {
+            btnAllFiles.visibility = android.view.View.VISIBLE
+            btnAllFiles.setOnClickListener {
+                runCatching {
+                    startActivity(
+                        Intent(
+                            android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                            Uri.parse("package:$packageName")
+                        )
+                    )
+                }
+            }
+        } else btnAllFiles.visibility = android.view.View.GONE
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -74,8 +95,19 @@ class BackupActivity : ServiceBoundActivity() {
             if (b != null) {
                 append("Last run: ${if (b.lastRunMs == 0L) "never" else fmt.format(Date(b.lastRunMs))}\n")
                 append("Last cycle: ${b.lastCopied} copied · total ${b.totalCopied}\n")
+                if (prefs.backupUseUsb.value) {
+                    append("USB target: ${b.usbTarget ?: "none writable"} · last ${b.lastUsbCopied} · total ${b.totalUsbCopied}\n")
+                }
                 if (b.lastError != null) append("Error: ${b.lastError}\n")
             }
+            append("\nUSB drives detected:\n")
+            val vols = com.printserver.core.files.UsbStorage.detect(this@BackupActivity)
+            if (vols.isEmpty()) append("  (none — plug an OTG drive)")
+            else vols.forEach {
+                append("  ${it.path}${if (it.writable) " ✓writable" else " (read-only)"} · free ${com.printserver.core.files.StorageProvider.humanSize(it.freeBytes)}\n")
+            }
+            if (android.os.Build.VERSION.SDK_INT in 29..30)
+                append("\nAndroid 10 note: direct USB writes may need 'All files access' below.\n")
             append("\nHow it works: new photos/videos from the camera folder are copied to the share (and Drive when linked). Nothing is deleted — it is a one-way archive.")
         }
     }

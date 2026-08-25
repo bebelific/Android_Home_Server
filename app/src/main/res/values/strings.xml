@@ -11,6 +11,7 @@
     <string name="title_media">Media Server</string>
     <string name="title_backup">Photo Backup</string>
     <string name="title_adblock">Ad Block DNS</string>
+    <string name="title_parental">Parental Controls</string>
     <string name="title_print">Print Server</string>
     <string name="title_discovery">Discovery</string>
     <string name="title_about">About</string>

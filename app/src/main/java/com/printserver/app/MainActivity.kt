@@ -94,12 +94,20 @@ class MainActivity : AppCompatActivity() {
             Card(HomeServerService.ID_BACKUP, "Photo Backup", "DCIM → share + Drive", R.drawable.ic_backup),
             Card(HomeServerService.ID_WEBCAM, "Webcam", "MJPEG stream + snapshots", R.drawable.ic_camera),
             Card(HomeServerService.ID_ADBLOCK, "Ad Block DNS", "Pi-hole-style filter", R.drawable.ic_shield),
+            Card("parental", "Parental Controls", "Kids devices: filter + bedtime", R.drawable.ic_parent),
             Card(HomeServerService.ID_DISCOVERY, "Discovery", "mDNS/Bonjour advertise", R.drawable.ic_discovery),
         )
         for (d in defs) {
             val v = CardView(this)
-            val serviceId = if (d.id == "media") HomeServerService.ID_FILES else d.id
-            v.bind(d) { checked -> bound?.onToggle(serviceId, checked) }
+            val serviceId = when (d.id) {
+                "media" -> HomeServerService.ID_FILES
+                "parental" -> null
+                else -> d.id
+            }
+            if (serviceId != null) v.bind(d) { checked -> bound?.onToggle(serviceId, checked) }
+            else v.bind(d) { checked ->
+                com.printserver.core.common.PreferencesManager(this).setPcEnabled(checked)
+            }
             v.root.setOnClickListener {
                 val target = when (d.id) {
                     HomeServerService.ID_PRINT -> PrintActivity::class.java
@@ -108,6 +116,7 @@ class MainActivity : AppCompatActivity() {
                     HomeServerService.ID_BACKUP -> BackupActivity::class.java
                     HomeServerService.ID_WEBCAM -> WebcamActivity::class.java
                     HomeServerService.ID_ADBLOCK -> AdBlockActivity::class.java
+                    "parental" -> ParentalActivity::class.java
                     HomeServerService.ID_DISCOVERY -> DiscoveryActivity::class.java
                     else -> null
                 }
@@ -147,12 +156,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun refresh() {
         val svcList = bound?.services()?.allServices ?: emptyList()
+        val prefs = com.printserver.core.common.PreferencesManager(applicationContext)
         var running = 0
         for ((pair, def) in cards.values) {
             val lookupId = if (def.id == "media") HomeServerService.ID_FILES else def.id
             val s = svcList.firstOrNull { it.id == lookupId }
-            pair.update(s?.state?.value ?: ServiceState.DISABLED)
-            if (s?.state?.value == ServiceState.RUNNING && def.id != "media") running++
+            val state = when {
+                def.id == "parental" ->
+                    if (prefs.pcEnabled.value) ServiceState.RUNNING else ServiceState.DISABLED
+                else -> s?.state?.value ?: ServiceState.DISABLED
+            }
+            pair.update(state)
+            if (state == ServiceState.RUNNING && def.id != "media" && def.id != "parental") running++
         }
         val total = cards.values.count { it.second.id != "media" }
         textStatus.text = when {

@@ -30,6 +30,30 @@
             android:layout_height="wrap_content"
             android:text="Unlink Drive"/>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Also copy to USB drive (OTG)"/>
+            <Switch
+                android:id="@+id/swUsb"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/buttonAllFiles"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="Grant All-files access (Android 10+)"/>
+
         <Button
             android:id="@+id/buttonRunNow"
             android:layout_width="match_parent"

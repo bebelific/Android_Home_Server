@@ -19,9 +19,12 @@ class DnsFilterServer(
     private val port: () -> Int,
     private val blocklist: () -> Set<String>,
     private val upstream: String = "8.8.8.8",
+    val extraCheck: ((client: String, domain: String) -> Boolean)? = null,
 ) {
     val total = AtomicLong()
     val blocked = AtomicLong()
+    val pcBlocked = AtomicLong()
+    val perClient = java.util.concurrent.ConcurrentHashMap<String, LongArray>()
     val lastBlocked = object : AtomicReference<ArrayDeque<String>>(ArrayDeque()) {}
     @Volatile var running = false
         private set
@@ -77,10 +80,15 @@ class DnsFilterServer(
         val qEnd = parsed.second
         if (qEnd + 4 > query.size) return
         val qtype = ((query[qEnd].toInt() and 0xFF) shl 8) or (query[qEnd + 1].toInt() and 0xFF)
-        if (blocklist().contains(name)) {
-            blocked.incrementAndGet()
-            noteBlocked(name)
-            val resp = if (qtype == 1) blockedAAnswer(query) else nxdomainAnswer(query)
+        val clientIp = (client as? InetSocketAddress)?.address?.hostAddress ?: "unknown"
+        val counters = perClient.getOrPut(clientIp) { LongArray(2) }
+        counters[0]++
+        val parental = extraCheck?.invoke(clientIp, name) == true
+        if (parental) pcBlocked.incrementAndGet()
+        if (parental || blocklist().contains(name)) {
+            if (!parental) blocked.incrementAndGet() else counters[1]++
+            noteBlocked(if (parental) "[$clientIp] $name" else name)
+            val resp = if (!parental && qtype == 1) blockedAAnswer(query) else nxdomainAnswer(query)
             send(resp, client, listenSocket)
             return
         }
