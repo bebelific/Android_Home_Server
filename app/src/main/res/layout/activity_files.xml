@@ -52,6 +52,13 @@
                 android:text="Share URLs"/>
         </LinearLayout>
 
+        <Button
+            android:id="@+id/buttonMedia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Browse media library"/>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

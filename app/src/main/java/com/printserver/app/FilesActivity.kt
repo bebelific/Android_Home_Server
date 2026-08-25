@@ -31,6 +31,9 @@ class FilesActivity : ServiceBoundActivity() {
             }
         }
         findViewById<Button>(R.id.buttonShareFiles).setOnClickListener { shareUrls() }
+        findViewById<Button>(R.id.buttonMedia).setOnClickListener {
+            startActivity(Intent(this, MediaActivity::class.java))
+        }
         refresh()
     }
 

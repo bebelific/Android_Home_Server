@@ -15,6 +15,7 @@ class DiscoveryService(
         fun webdavPort(): Int
         fun ftpPort(): Int
         fun mjpegPort(): Int
+        fun adblockPort(): Int = 53
     }
 
     private var jmdns: JmDNS? = null
@@ -42,6 +43,7 @@ class DiscoveryService(
         register(jm, "_ftp._tcp.local.", "AndroidHomeServer FTP", ports.ftpPort(), ports.enabled("file_sharing"))
         register(jm, "_pdl-datastream._tcp.local.", "AndroidHomeServer Print", ports.printPort(), ports.enabled("print_server"))
         register(jm, "_androidhomeserver._tcp.local.", "AndroidHomeServer", ports.mjpegPort(), true, "path=/status")
+        register(jm, "_domain._udp.local.", "AndroidHomeServer DNS", ports.adblockPort(), ports.enabled("adblock"))
     }
 
     private fun register(jm: JmDNS, type: String, name: String, port: Int, enabled: Boolean, txt: String = "") {

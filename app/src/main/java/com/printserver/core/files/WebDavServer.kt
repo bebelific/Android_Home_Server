@@ -46,7 +46,7 @@ class WebDavServer(
             when (session.method) {
                 NanoHTTPD.Method.OPTIONS -> options()
                 NanoHTTPD.Method.PROPFIND -> propfind(rel, session.headers["depth"] ?: "1")
-                NanoHTTPD.Method.GET -> get(rel)
+                NanoHTTPD.Method.GET -> get(rel, session)
                 NanoHTTPD.Method.HEAD -> head(rel)
                 NanoHTTPD.Method.PUT -> put(rel, session)
                 NanoHTTPD.Method.POST -> post(rel, session)
@@ -81,14 +81,70 @@ class WebDavServer(
 
     private fun target(rel: String): File = StorageProvider.safeResolve(root(), rel)
 
-    private fun get(rel: String): NanoHTTPD.Response {
+    private fun get(rel: String, session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response {
         val f = target(rel)
         if (!f.exists()) return plain(NanoHTTPD.Response.Status.NOT_FOUND, "not found")
         if (f.isDirectory) return dirPage(f, rel)
-        return NanoHTTPD.newFixedLengthResponse(
-            NanoHTTPD.Response.Status.OK, StorageProvider.guessMime(f.name),
-            FileInputStream(f), f.length()
-        )
+        val mime = StorageProvider.guessMime(f.name)
+        val range = sessionRange(f.length(), session.headers["range"])
+        return when {
+            range == null ->
+                NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, mime, FileInputStream(f), f.length())
+            range.first >= f.length() ->
+                plain(NanoHTTPD.Response.Status.RANGE_NOT_SATISFIABLE, "range out of bounds")
+            else -> {
+                val count = range.last - range.first + 1
+                val stream = FileInputStream(f)
+                var skipped = 0L
+                while (skipped < range.first) {
+                    val s = stream.skip(range.first - skipped)
+                    if (s <= 0) break
+                    skipped += s
+                }
+                NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.PARTIAL_CONTENT, mime, LimitedStream(stream, count), count)
+                    .apply {
+                        addHeader("Content-Range", "bytes ${range.first}-${range.last}/${f.length()}")
+                        addHeader("Accept-Ranges", "bytes")
+                    }
+            }
+        }
+    }
+
+    private fun sessionRange(length: Long, header: String?): LongRange? {
+        if (header.isNullOrBlank()) return null
+        val m = Regex("bytes=(\\d*)-(\\d*)").find(header.trim()) ?: return null
+        val (a, b) = m.destructured
+        return when {
+            a.isEmpty() && b.isEmpty() -> null
+            a.isEmpty() -> {
+                val suffix = b.toLongOrNull() ?: return null
+                if (suffix <= 0) return null
+                val start = maxOf(0, length - suffix)
+                start until length
+            }
+            else -> {
+                val start = a.toLong()
+                val end = b.toLongOrNull()?.coerceAtMost(length - 1) ?: (length - 1)
+                if (end < start) null else start..end
+            }
+        }
+    }
+
+    private class LimitedStream(private val src: java.io.InputStream, private val limit: Long) : java.io.InputStream() {
+        private var remaining = limit
+        override fun read(): Int {
+            if (remaining <= 0) return -1
+            val v = src.read()
+            if (v >= 0) remaining--
+            return v
+        }
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (remaining <= 0) return -1
+            val n = src.read(b, off, minOf(len.toLong(), remaining).toInt())
+            if (n > 0) remaining -= n
+            return n
+        }
+        override fun close() { src.close() }
     }
 
     private fun head(rel: String): NanoHTTPD.Response {

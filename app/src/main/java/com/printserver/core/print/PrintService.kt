@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class PrintService(
+    private val context: Context,
     private val prefs: PreferencesManager,
     private val usb: UsbPrinterManager,
 ) : Service {
@@ -34,7 +35,36 @@ class PrintService(
         return try {
             val port = prefs.printPort.value
             queue = InMemoryJobQueue()
-            pipeline = JobPipeline(queue!!) { usb.findPrinter()?.let { usb.openPrinter(it) } }
+            val archive: java.io.File? = if (prefs.printArchive.value) {
+                java.io.File(
+                    com.printserver.core.files.StorageProvider.resolveRoot(context, prefs.shareRoot.value),
+                    "PrintJobs"
+                ).apply { mkdirs() }
+            } else null
+            pipeline = JobPipeline(
+                queue!!,
+                { usb.findPrinter()?.let { usb.openPrinter(it) } },
+                sinkFactory = { id ->
+                    if (archive == null) null else runCatching {
+                        archive.listFiles()?.sortedBy { it.name }?.let { files ->
+                            files.take((files.size - 19).coerceAtLeast(0)).forEach { it.delete() }
+                        }
+                        val f = java.io.File(archive, "job-%d-%d.prn".format(id, System.currentTimeMillis()))
+                        f to java.io.FileOutputStream(f)
+                    }.getOrNull()
+                },
+                onSinkDone = { f ->
+                    val drive = prefs.driveTreeUri.value
+                    if (f != null && drive.isNotBlank()) {
+                        runCatching {
+                            com.printserver.core.files.DriveSaf.writeAppend(
+                                context, android.net.Uri.parse(drive), f.name,
+                                "application/octet-stream", f
+                            )
+                        }
+                    }
+                },
+            )
             server = TcpPrintServer(port).also { srv ->
                 srv.start(object : IngressListener {
                     override suspend fun onStream(stream: java.io.InputStream, meta: ConnectionMeta) {

@@ -57,12 +57,16 @@ class HomeServerService : Service() {
         registry = ServiceRegistry(applicationContext)
         battery = BatteryHealthLogger(this, File(filesDir, "battery_health.csv"))
 
-        val print = PrintService(prefs, usb)
+        val print = PrintService(this, prefs, usb)
         val files = FileService(prefs)
         val camera = CameraService(prefs)
+        val backup = com.printserver.core.backup.PhotoBackupService(prefs)
+        val adblock = com.printserver.core.adblock.AdBlockService(prefs)
         registry.register(print)
         registry.register(files)
         registry.register(camera)
+        registry.register(backup)
+        registry.register(adblock)
         registry.register(DiscoverySvc())
 
         discovery = DiscoveryService(applicationContext)
@@ -101,6 +105,8 @@ class HomeServerService : Service() {
                 ID_FILES -> prefs.fileSharingEnabled.value
                 ID_WEBCAM -> prefs.webcamEnabled.value
                 ID_DISCOVERY -> prefs.discoveryEnabled.value
+                "photo_backup" -> prefs.backupEnabled.value
+                "adblock" -> prefs.adblockEnabled.value
                 else -> false
             }
             if (wanted && svc.state.value == ServiceState.DISABLED) {
@@ -131,6 +137,7 @@ class HomeServerService : Service() {
         ID_FILES -> prefs.webdavPort.value
         ID_WEBCAM -> prefs.mjpegPort.value
         ID_DISCOVERY -> 5353
+        "adblock" -> prefs.adblockPort.value
         else -> 0
     }
 
@@ -173,6 +180,8 @@ class HomeServerService : Service() {
         ID_FILES -> prefs.fileSharingEnabled.value
         ID_WEBCAM -> prefs.webcamEnabled.value
         ID_DISCOVERY -> prefs.discoveryEnabled.value
+        "photo_backup" -> prefs.backupEnabled.value
+        "adblock" -> prefs.adblockEnabled.value
         else -> false
     }
 
@@ -181,6 +190,8 @@ class HomeServerService : Service() {
         ID_FILES -> prefs.setFileSharingEnabled(v)
         ID_WEBCAM -> prefs.setWebcamEnabled(v)
         ID_DISCOVERY -> prefs.setDiscoveryEnabled(v)
+        "photo_backup" -> prefs.setBackupEnabled(v)
+        "adblock" -> prefs.setAdblockEnabled(v)
         else -> {}
     }
 
@@ -199,6 +210,7 @@ class HomeServerService : Service() {
         override fun webdavPort() = prefs.webdavPort.value
         override fun ftpPort() = prefs.ftpPort.value
         override fun mjpegPort() = prefs.mjpegPort.value
+        override fun adblockPort() = prefs.adblockPort.value
     }
 
     private fun onThermalLevel(level: Int) {
@@ -310,5 +322,7 @@ class HomeServerService : Service() {
         const val ID_FILES = "file_sharing"
         const val ID_WEBCAM = "webcam"
         const val ID_DISCOVERY = "discovery"
+        const val ID_BACKUP = "photo_backup"
+        const val ID_ADBLOCK = "adblock"
     }
 }

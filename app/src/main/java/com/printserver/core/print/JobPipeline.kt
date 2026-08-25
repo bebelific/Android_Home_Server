@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class JobPipeline(
     private val queue: JobQueue,
     private val openSession: () -> UsbPrinterSession?,
+    private val sinkFactory: ((Long) -> Pair<java.io.File, java.io.OutputStream>?)? = null,
+    private val onSinkDone: ((java.io.File?) -> Unit)? = null,
 ) {
     private val busy = AtomicBoolean(false)
     val acceptsWork: Boolean get() = !busy.get()
@@ -24,6 +26,8 @@ class JobPipeline(
         }
         var job = queue.begin(meta)
         var session: UsbPrinterSession? = null
+        val sinkPair = sinkFactory?.invoke(job.id)
+        val sink = sinkPair?.second
         try {
             session = openSession()
             if (session == null) {
@@ -48,6 +52,7 @@ class JobPipeline(
                     sent += w
                 }
                 received += n
+                sink?.write(buf, 0, n)
                 val now = System.nanoTime()
                 if (now - lastTick >= TICK_NS) {
                     lastTick = now
@@ -63,6 +68,8 @@ class JobPipeline(
             queue.update(job.copy(state = JobState.FAILED, error = e.message ?: e.javaClass.simpleName))
             PrinterLog.e(TAG, "Job #${job.id} failed: $e")
         } finally {
+            runCatching { sink?.flush(); sink?.close() }
+            onSinkDone?.invoke(sinkPair?.first)
             session?.close()
             busy.set(false)
         }

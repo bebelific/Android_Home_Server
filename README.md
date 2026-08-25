@@ -13,8 +13,11 @@ Philosophy: the phone is a **transport/appliance**, not a renderer. Your PC's dr
 | Print Server | Raw TCP (JetDirect) | `9100` | any TCP stream → USB printer |
 | File Sharing | HTTP browser + WebDAV | `8080` | `http://<phone>:8080/` |
 | File Sharing | FTP | `2121` | `ftp://<phone>:2121/` |
+| Media Server | Direct-play HTTP (Range/seek) | `8080` | Media page → tap to play in VLC/MX/nPlayer |
+| Photo Backup | Local + Google Drive (SAF) | — | DCIM → `PhotoBackup/<device>/` + Drive folder |
 | Webcam | MJPEG over HTTP | `8081` | `/stream`, `/snapshot.jpg`, `/status` |
-| Discovery | mDNS/Bonjour | `5353` | `_http._tcp`, `_ftp._tcp`, `_pdl-datastream._tcp` |
+| Ad Block DNS | UDP DNS filter (Pi-hole style) | `53` | point router/device DNS at the phone |
+| Discovery | mDNS/Bonjour | `5353` | `_http`, `_ftp`, `_pdl-datastream`, `_domain` |
 
 All ports are configurable in-app (Settings). Changes apply after **Restart all**.
 
@@ -74,7 +77,30 @@ Files live under shared storage `/HomeServer/` (app-private fallback if storage 
 - Snapshot (NVR-poll friendly): `http://<phone>:8081/snapshot.jpg`
 - Telemetry JSON: `http://<phone>:8081/status`
 
-Torch, front/back camera, FPS (5–30), JPEG quality are persisted settings. Thermal throttling automatically reduces FPS before pausing the camera.
+Torch, front/back camera, FPS (5–30), JPEG quality are persisted settings; frames are auto-rotated to portrait. Thermal throttling reduces FPS before pausing the camera; a stall detector restarts it automatically (e.g. after lock/unlock).
+
+## Media server
+
+Dashboard → **Media Server** scans the share for video/audio, then plays any item to whatever app handles it (VLC, MX Player, nPlayer, browsers). Files are served with **HTTP Range** support, so seeking works. It's direct-play — no transcoding, which is exactly what an old phone wants.
+
+**Why not Plex/Jellyfin?** Plex is proprietary (can't be bundled). Jellyfin is open source but its server is .NET and won't run natively on Android. DLNA/UPnP (open standard, legal to implement) is the roadmap path for smart-TV auto-discovery.
+
+## Photo backup + Google Drive
+
+Dashboard → **Photo Backup**: copies new camera photos/videos to `PhotoBackup/<device>/` on the share, and — after you **Link Google Drive folder** once (system picker; no API keys, uses Android Storage Access Framework) — uploads each new file to that Drive folder too. One-way archive; nothing is ever deleted.
+
+## Ad Block DNS (mini-Pi-hole)
+
+Dashboard → **Ad Block DNS** runs a LAN DNS filter on port 53 with a built-in starter blocklist; one tap downloads the [StevenBlack hosts](https://github.com/StevenBlack/hosts) list (~100k domains). Point your **router's DHCP DNS** at the phone (protects every device), or set DNS per-device. Live stats: queries, blocked count, recent blocks.
+
+## Remote access (VPN)
+
+A VPN *server* isn't embedded — instead use one of these proven apps on the phone, which exposes **all** services securely off-LAN:
+
+- **Tailscale** (easiest): install, sign in on the phone + your laptop/phone → reach every port via the phone's `100.x.y.z` tailnet IP, from anywhere. Zero router config.
+- **Twingate**: run Connectors on any small always-on host (cloud VM/NAS), add the phone's LAN IP as a Resource, then use Twingate clients to reach it.
+
+Both are free for personal use and keep everything off the public internet.
 
 ---
 

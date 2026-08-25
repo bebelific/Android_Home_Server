@@ -27,7 +27,8 @@ class AboutActivity : ServiceBoundActivity() {
             append("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
             append("App ID: $packageName\n\n")
             append("Design: pass-through appliance — the PC renders, the phone serves and streams. LAN-only by design.\n\n")
-            append("Libraries: NanoHTTPD, Apache FtpServer, JmDNS, Kotlin Coroutines.\n")
+            append("Libraries: NanoHTTPD, Apache FtpServer, JmDNS, Kotlin Coroutines.\n\n")
+            append("Remote access (VPN): install Tailscale — sign in on the phone and your laptop/phone; every service is then reachable via the phone's 100.x.y.z tailnet IP from anywhere. Twingate works too: run Connectors on a small cloud VM/NAS, add this phone's LAN IP as a Resource, and access it through the Twingate client. Both are zero-config at the router and keep everything off the public internet.\n")
         }
 
         findViewById<Button>(R.id.buttonProject).setOnClickListener {

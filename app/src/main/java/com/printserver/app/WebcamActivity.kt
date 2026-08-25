@@ -41,6 +41,7 @@ class WebcamActivity : ServiceBoundActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webcam)
         title = getString(R.string.title_webcam)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         preview = findViewById(R.id.imagePreview)
         previewHint = findViewById(R.id.textPreviewHint)
         textStatus = findViewById(R.id.textWebcamStatus)

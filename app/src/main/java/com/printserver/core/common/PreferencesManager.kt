@@ -24,6 +24,13 @@ object PrefKeys {
     const val CAMERA_TORCH = "camera_torch"
     const val MJPEG_QUALITY = "mjpeg_quality"
     const val MJPEG_FPS = "mjpeg_fps"
+    const val BACKUP_ENABLED = "backup_enabled"
+    const val BACKUP_INTERVAL_MIN = "backup_interval_min"
+    const val BACKUP_LAST_RUN = "backup_last_run"
+    const val DRIVE_TREE_URI = "drive_tree_uri"
+    const val PRINT_ARCHIVE = "print_archive"
+    const val ADBLOCK_ENABLED = "adblock_enabled"
+    const val ADBLOCK_PORT = "adblock_port"
 }
 
 class PreferencesManager(context: Context) {
@@ -52,6 +59,14 @@ class PreferencesManager(context: Context) {
     private val _mjpegQuality = MutableStateFlow(prefs.getInt(PrefKeys.MJPEG_QUALITY, 70))
     private val _mjpegFps = MutableStateFlow(prefs.getInt(PrefKeys.MJPEG_FPS, 15))
 
+    private val _backupEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.BACKUP_ENABLED, false))
+    private val _backupIntervalMin = MutableStateFlow(prefs.getInt(PrefKeys.BACKUP_INTERVAL_MIN, 15))
+    private val _backupLastRun = MutableStateFlow(prefs.getLong(PrefKeys.BACKUP_LAST_RUN, 0L))
+    private val _driveTreeUri = MutableStateFlow(prefs.getString(PrefKeys.DRIVE_TREE_URI, "") ?: "")
+    private val _printArchive = MutableStateFlow(prefs.getBoolean(PrefKeys.PRINT_ARCHIVE, false))
+    private val _adblockEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.ADBLOCK_ENABLED, false))
+    private val _adblockPort = MutableStateFlow(prefs.getInt(PrefKeys.ADBLOCK_PORT, 53))
+
     val printServerEnabled: StateFlow<Boolean> = _printServerEnabled.asStateFlow()
     val fileSharingEnabled: StateFlow<Boolean> = _fileSharingEnabled.asStateFlow()
     val webcamEnabled: StateFlow<Boolean> = _webcamEnabled.asStateFlow()
@@ -73,6 +88,14 @@ class PreferencesManager(context: Context) {
     val cameraTorch: StateFlow<Boolean> = _cameraTorch.asStateFlow()
     val mjpegQuality: StateFlow<Int> = _mjpegQuality.asStateFlow()
     val mjpegFps: StateFlow<Int> = _mjpegFps.asStateFlow()
+
+    val backupEnabled: StateFlow<Boolean> = _backupEnabled.asStateFlow()
+    val backupIntervalMin: StateFlow<Int> = _backupIntervalMin.asStateFlow()
+    val backupLastRun: StateFlow<Long> = _backupLastRun.asStateFlow()
+    val driveTreeUri: StateFlow<String> = _driveTreeUri.asStateFlow()
+    val printArchive: StateFlow<Boolean> = _printArchive.asStateFlow()
+    val adblockEnabled: StateFlow<Boolean> = _adblockEnabled.asStateFlow()
+    val adblockPort: StateFlow<Int> = _adblockPort.asStateFlow()
 
     fun setPrintServerEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PRINT_SERVER_ENABLED, v).apply(); _printServerEnabled.value = v }
     fun setFileSharingEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.FILE_SHARING_ENABLED, v).apply(); _fileSharingEnabled.value = v }
@@ -99,6 +122,14 @@ class PreferencesManager(context: Context) {
     fun setCameraTorch(v: Boolean) { prefs.edit().putBoolean(PrefKeys.CAMERA_TORCH, v).apply(); _cameraTorch.value = v }
     fun setMjpegQuality(v: Int) { val c = v.coerceIn(30, 95); prefs.edit().putInt(PrefKeys.MJPEG_QUALITY, c).apply(); _mjpegQuality.value = c }
     fun setMjpegFps(v: Int) { val c = v.coerceIn(5, 30); prefs.edit().putInt(PrefKeys.MJPEG_FPS, c).apply(); _mjpegFps.value = c }
+
+    fun setBackupEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.BACKUP_ENABLED, v).apply(); _backupEnabled.value = v }
+    fun setBackupIntervalMin(v: Int) { val c = v.coerceIn(5, 720); prefs.edit().putInt(PrefKeys.BACKUP_INTERVAL_MIN, c).apply(); _backupIntervalMin.value = c }
+    fun setBackupLastRun(v: Long) { prefs.edit().putLong(PrefKeys.BACKUP_LAST_RUN, v).apply(); _backupLastRun.value = v }
+    fun setDriveTreeUri(v: String) { prefs.edit().putString(PrefKeys.DRIVE_TREE_URI, v).apply(); _driveTreeUri.value = v }
+    fun setPrintArchive(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PRINT_ARCHIVE, v).apply(); _printArchive.value = v }
+    fun setAdblockEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.ADBLOCK_ENABLED, v).apply(); _adblockEnabled.value = v }
+    fun setAdblockPort(v: Int) { val c = v.coerceIn(53, 65535); prefs.edit().putInt(PrefKeys.ADBLOCK_PORT, c).apply(); _adblockPort.value = c }
 
     companion object {
         fun sha256(s: String): String = try {

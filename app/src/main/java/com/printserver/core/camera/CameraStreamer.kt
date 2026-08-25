@@ -18,6 +18,8 @@ class CameraStreamer(private val bus: FrameBus) {
     @Volatile var jpegQuality: Int = 70
     @Volatile var facingBack: Boolean = true
     @Volatile var torchRequested: Boolean = false
+    @Volatile var rotationDegrees: Int = 0
+        private set
 
     val isRunning: Boolean get() = camera != null
     val resolution: String get() = if (width > 0) "${width}x${height}" else "-"
@@ -59,6 +61,13 @@ class CameraStreamer(private val bus: FrameBus) {
     }
 
     private fun configure(cam: Camera) {
+        val id = pickId()
+        val info = Camera.CameraInfo()
+        Camera.getCameraInfo(id, info)
+        rotationDegrees = if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
+            (360 - info.orientation) % 360
+        else
+            info.orientation
         val p = cam.parameters
         val sizes = p.supportedPreviewSizes.orEmpty()
             .filter { it.width <= MAX_WIDTH && it.height <= MAX_HEIGHT }
@@ -104,7 +113,21 @@ class CameraStreamer(private val bus: FrameBus) {
         val yuv = YuvImage(data, ImageFormat.NV21, width, height, null)
         val out = ByteArrayOutputStream(data.size / 2)
         yuv.compressToJpeg(Rect(0, 0, width, height), jpegQuality.coerceIn(30, 95), out)
-        bus.publish(out.toByteArray())
+        val raw = out.toByteArray()
+        if (rotationDegrees % 360 == 0) {
+            bus.publish(raw)
+            return
+        }
+        val bmp = android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size) ?: run {
+            bus.publish(raw); return
+        }
+        val m = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+        val rotated = android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+        val out2 = ByteArrayOutputStream(raw.size / 2)
+        rotated.compress(android.graphics.Bitmap.CompressFormat.JPEG, jpegQuality.coerceIn(30, 95), out2)
+        bus.publish(out2.toByteArray())
+        if (rotated !== bmp) bmp.recycle()
+        rotated.recycle()
     }
 
     fun pause() {

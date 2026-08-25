@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/textBackup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:textIsSelectable="true"/>
+
+        <Button
+            android:id="@+id/buttonPickDrive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Link Google Drive folder"/>
+
+        <Button
+            android:id="@+id/buttonClearDrive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Unlink Drive"/>
+
+        <Button
+            android:id="@+id/buttonRunNow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Run backup now"/>
+    </LinearLayout>
+</ScrollView>

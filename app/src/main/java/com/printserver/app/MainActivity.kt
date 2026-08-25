@@ -90,17 +90,25 @@ class MainActivity : AppCompatActivity() {
         val defs = listOf(
             Card(HomeServerService.ID_PRINT, "Print Server", "Raw 9100 -> USB printer", R.drawable.ic_print),
             Card(HomeServerService.ID_FILES, "File Sharing", "WebDAV + FTP + browser", R.drawable.ic_folder),
+            Card("media", "Media Server", "Stream videos & music", R.drawable.ic_media),
+            Card(HomeServerService.ID_BACKUP, "Photo Backup", "DCIM → share + Drive", R.drawable.ic_backup),
             Card(HomeServerService.ID_WEBCAM, "Webcam", "MJPEG stream + snapshots", R.drawable.ic_camera),
+            Card(HomeServerService.ID_ADBLOCK, "Ad Block DNS", "Pi-hole-style filter", R.drawable.ic_shield),
             Card(HomeServerService.ID_DISCOVERY, "Discovery", "mDNS/Bonjour advertise", R.drawable.ic_discovery),
         )
         for (d in defs) {
             val v = CardView(this)
-            v.bind(d) { checked -> bound?.onToggle(d.id, checked) }
+            val serviceId = if (d.id == "media") HomeServerService.ID_FILES else d.id
+            v.bind(d) { checked -> bound?.onToggle(serviceId, checked) }
+            if (d.id == "media") v.hideSwitch()
             v.root.setOnClickListener {
                 val target = when (d.id) {
                     HomeServerService.ID_PRINT -> PrintActivity::class.java
                     HomeServerService.ID_FILES -> FilesActivity::class.java
+                    "media" -> MediaActivity::class.java
+                    HomeServerService.ID_BACKUP -> BackupActivity::class.java
                     HomeServerService.ID_WEBCAM -> WebcamActivity::class.java
+                    HomeServerService.ID_ADBLOCK -> AdBlockActivity::class.java
                     HomeServerService.ID_DISCOVERY -> DiscoveryActivity::class.java
                     else -> null
                 }
@@ -142,11 +150,12 @@ class MainActivity : AppCompatActivity() {
         val svcList = bound?.services()?.allServices ?: emptyList()
         var running = 0
         for ((pair, def) in cards.values) {
-            val s = svcList.firstOrNull { it.id == def.id }
+            val lookupId = if (def.id == "media") HomeServerService.ID_FILES else def.id
+            val s = svcList.firstOrNull { it.id == lookupId }
             pair.update(s?.state?.value ?: ServiceState.DISABLED)
-            if (s?.state?.value == ServiceState.RUNNING) running++
+            if (s?.state?.value == ServiceState.RUNNING && def.id != "media") running++
         }
-        val total = cards.size
+        val total = cards.values.count { it.second.id != "media" }
         textStatus.text = when {
             running == total && total > 0 -> "ALL RUNNING"
             running > 0 -> "$running / $total RUNNING"
@@ -226,6 +235,7 @@ class MainActivity : AppCompatActivity() {
 
         @Volatile private var suppressCallbacks = false
         private var subtitleText = ""
+        fun hideSwitch() { sw.visibility = View.GONE }
         fun bind(def: Card, onChange: (Boolean) -> Unit) {
             icon.setImageResource(def.icon)
             title.text = def.name

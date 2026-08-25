@@ -75,7 +75,7 @@ class CameraService(
                 } else if (frames == lastFrames) {
                     stalls++
                     PrinterLog.w(TAG, "Frame stall ($stalls) at $frames frames")
-                    if (stalls >= 2) {
+                    if (stalls >= 3) {
                         stalls = 0
                         PrinterLog.i(TAG, "Restarting stalled camera")
                         streamer.stop()
