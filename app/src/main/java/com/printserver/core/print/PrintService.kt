@@ -74,4 +74,9 @@ class PrintService(
         val d = usb.findPrinter()
         if (d == null) callback(false) else usb.requestPermission(d, callback)
     }
+
+    fun printerDescription(): String? = usb.findPrinter()?.let { usb.describe(it) }
+
+    fun jobSnapshot(): Pair<com.printserver.core.print.PrintJob?, List<com.printserver.core.print.PrintJob>> =
+        (queue?.active()) to (queue?.recent().orEmpty().take(6))
 }

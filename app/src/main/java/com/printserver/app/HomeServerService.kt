@@ -71,6 +71,21 @@ class HomeServerService : Service() {
         watchdog = Watchdog(registry, battery) { emergencyStop("watchdog") }
 
         createChannel()
+        if (Build.VERSION.SDK_INT >= 26) {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(
+                android.app.NotificationChannel(
+                    com.printserver.core.power.ChargeGuard.CHANNEL_ID,
+                    "Charging guard",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+            )
+        }
+        com.printserver.core.power.ChargeGuard.start(
+            this,
+            { prefs.chargeLimit.value },
+            { battery.readNow()?.let { it.percent to (it.plugged != "NONE") } }
+        )
         startForegroundCompat()
         thermal.start()
         battery.start()
@@ -215,6 +230,7 @@ class HomeServerService : Service() {
     }
 
     override fun onDestroy() {
+        com.printserver.core.power.ChargeGuard.stop()
         if (!shuttingDown) {
             registry.stopAll()
             thermal.stop()

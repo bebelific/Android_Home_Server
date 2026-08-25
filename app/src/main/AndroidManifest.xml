@@ -45,6 +45,11 @@
 
         <activity android:name=".SettingsActivity" android:exported="false" android:label="@string/title_settings" />
         <activity android:name=".LogActivity" android:exported="false" android:label="@string/title_logs" />
+        <activity android:name=".WebcamActivity" android:exported="false" android:label="@string/title_webcam" />
+        <activity android:name=".FilesActivity" android:exported="false" android:label="@string/title_files" />
+        <activity android:name=".PrintActivity" android:exported="false" android:label="@string/title_print" />
+        <activity android:name=".DiscoveryActivity" android:exported="false" android:label="@string/title_discovery" />
+        <activity android:name=".AboutActivity" android:exported="false" android:label="@string/title_about" />
 
         <service
             android:name=".HomeServerService"

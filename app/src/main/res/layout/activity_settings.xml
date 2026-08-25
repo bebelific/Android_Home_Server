@@ -53,6 +53,21 @@
             android:layout_height="wrap_content"
             android:max="50"/>
 
+        <TextView
+            android:id="@+id/tvGuardStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textSize="12sp"
+            android:text="Bypass charging depends on your phone brand/model — check your built-in battery settings (e.g. Samsung 'Protect battery' 85%, Sony 'Battery care', OnePlus/Oppo 'Optimized charging', ASUS/ROG + RedMagic 'Bypass charging'). Rooted phones can use ACC-style sysfs control, which this app attempts automatically. For a permanent appliance, a battery-removal + PSU board is the safest option."
+            android:textColor="?android:attr/textColorSecondary"/>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

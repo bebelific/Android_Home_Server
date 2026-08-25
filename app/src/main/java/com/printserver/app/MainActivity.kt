@@ -77,6 +77,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.buttonLogs).setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
         findViewById<Button>(R.id.buttonSettings).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         findViewById<Button>(R.id.buttonRestartAll).setOnClickListener { bound?.restartAll() }
+        findViewById<Button>(R.id.buttonAbout).setOnClickListener {
+            startActivity(Intent(this, AboutActivity::class.java))
+        }
     }
 
     private fun printServiceOf(): PrintService? =
@@ -93,6 +96,16 @@ class MainActivity : AppCompatActivity() {
         for (d in defs) {
             val v = CardView(this)
             v.bind(d) { checked -> bound?.onToggle(d.id, checked) }
+            v.root.setOnClickListener {
+                val target = when (d.id) {
+                    HomeServerService.ID_PRINT -> PrintActivity::class.java
+                    HomeServerService.ID_FILES -> FilesActivity::class.java
+                    HomeServerService.ID_WEBCAM -> WebcamActivity::class.java
+                    HomeServerService.ID_DISCOVERY -> DiscoveryActivity::class.java
+                    else -> null
+                }
+                if (target != null) startActivity(Intent(this, target))
+            }
             container.addView(v.root)
             cards[d.id] = v to d
         }
@@ -165,7 +178,7 @@ class MainActivity : AppCompatActivity() {
         val pct = if (l >= 0 && s > 0) l * 100 / s else -1
         val t = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0
         val plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
-        return "Battery: $pct%  ${"%.1f".format(t)}C  ${if (plugged) "charging" else "on battery"}"
+        return "Battery: $pct%  ${"%.1f".format(t)}C  ${if (plugged) "charging" else "on battery"}  ${com.printserver.core.power.ChargeGuard.statusShort()}"
     }
 
     private fun uptimeLine(): String {

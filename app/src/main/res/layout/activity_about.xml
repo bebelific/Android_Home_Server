@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/textAbout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textIsSelectable="true"/>
+
+        <Button
+            android:id="@+id/buttonProject"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="GitHub project page"/>
+
+        <Button
+            android:id="@+id/buttonOpenLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="View logs"/>
+    </LinearLayout>
+</ScrollView>

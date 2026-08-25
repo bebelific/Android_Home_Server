@@ -85,6 +85,17 @@ Torch, front/back camera, FPS (5–30), JPEG quality are persisted settings. The
 - Watchdog: unhealthy services restarted every 60 s; disk/heap/battery deep-check every 6 h
 - Thermal cascade: LIGHT → halve FPS/transfers · MODERATE → pause cam, quarter transfers · SEVERE → stop non-critical · CRITICAL → emergency stop
 - Battery health CSV (`battery_health.csv`, 15-min samples) in app storage
+- **Charging guard**: set a charge limit (default 80%). On **rooted** phones the app pauses charging at the limit and resumes 15% lower (sysfs). Without root it monitors and logs only — true bypass charging is brand-specific:
+
+  | Brand | Built-in option |
+  |-------|-----------------|
+  | Samsung | Battery → *Protect battery* (85%) |
+  | Sony | *Battery care* / charge cap |
+  | OnePlus / Oppo / Realme | *Optimized charging* |
+  | ASUS ROG / RedMagic | *Bypass charging* (true DC passthrough) |
+  | Xiaomi / POCO | Battery → *Battery protection* |
+
+  Rooted alternative: [ACC (Advanced Charging Controller)](https://github.com/MatteCarra/AccA). Permanent appliance: battery-removal + PSU board (zero battery risk).
 
 Full engineering plan: [`BUILD_PLAN.md`](BUILD_PLAN.md).
 

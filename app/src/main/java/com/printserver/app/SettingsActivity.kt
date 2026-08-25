@@ -30,9 +30,12 @@ class SettingsActivity : AppCompatActivity() {
 
         val seek = findViewById<SeekBar>(R.id.sbChargeLimit)
         val label = findViewById<TextView>(R.id.tvChargeLimit)
+        val guard = findViewById<TextView>(R.id.tvGuardStatus)
+        fun guardText() { guard.text = com.printserver.core.power.ChargeGuard.statusLong() }
         seek.max = 50
         seek.progress = prefs.chargeLimit.value - 50
         label.text = "Charge limit: ${prefs.chargeLimit.value}%"
+        guardText()
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
                 if (fromUser) { prefs.setChargeLimit(p + 50); label.text = "Charge limit: ${p + 50}%" }
