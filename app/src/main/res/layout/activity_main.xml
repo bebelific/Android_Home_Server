@@ -170,14 +170,10 @@
         android:background="#000000"
         android:visibility="gone">
 
-        <ImageView
-            android:id="@+id/saverLogo"
-            android:layout_width="190dp"
-            android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:alpha="0.32"
-            android:src="@drawable/saver_logo"
-            android:contentDescription="logo"/>
+        <com.printserver.app.MatrixRainView
+            android:id="@+id/saverRain"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
 
         <LinearLayout
             android:id="@+id/saverClockBlock"

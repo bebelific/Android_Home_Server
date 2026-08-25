@@ -49,11 +49,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textLogs: TextView
     private lateinit var buttonUsb: Button
     private lateinit var saverOverlay: View
-    private lateinit var saverLogo: ImageView
+    private lateinit var saverRain: MatrixRainView
     private lateinit var saverClockBlock: View
     private lateinit var tvSaverClock: TextView
     private lateinit var tvSaverDate: TextView
     private lateinit var tvSaverStatus: TextView
+    private var logoBmp: android.graphics.Bitmap? = null
 
     private data class Card(val id: String, val name: String, val subtitle: String, val icon: Int)
     private val cards = LinkedHashMap<String, Pair<CardView, Card>>()
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity() {
     private val floaters = mutableListOf<Floater>()
     private var saverOn = false
     private var lastStatusText = 0L
+    private val idleRunnable2: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,16 +106,23 @@ class MainActivity : AppCompatActivity() {
     private fun showSaver() {
         saverOn = true
         saverOverlay.visibility = View.VISIBLE
-        saverLogo.visibility = if (prefs.saverShowLogo.value) View.VISIBLE else View.GONE
+        val showRain = prefs.saverShowLogo.value
+        saverRain.visibility = if (showRain) View.VISIBLE else View.GONE
         saverClockBlock.visibility = if (prefs.saverShowClock.value) View.VISIBLE else View.GONE
         tvSaverStatus.visibility = if (prefs.saverShowStatus.value) View.VISIBLE else View.GONE
+        if (showRain) {
+            if (logoBmp == null) {
+                logoBmp = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.saver_logo)
+            }
+            logoBmp?.let { saverRain.setLogoSource(it) }
+        }
         floaters.clear()
         saverOverlay.post {
             val w = saverOverlay.width
             val h = saverOverlay.height
             if (w <= 0 || h <= 0) return@post
             val base = floatSpeedDp()
-            for (f in listOf(saverLogo, saverClockBlock, tvSaverStatus)) {
+            for (f in listOf(saverClockBlock, tvSaverStatus)) {
                 if (f.visibility != View.VISIBLE) continue
                 f.translationX = (0..(w - f.width).coerceAtLeast(0)).random().toFloat()
                 f.translationY = (0..(h - f.height).coerceAtLeast(0)).random().toFloat()
@@ -132,6 +141,10 @@ class MainActivity : AppCompatActivity() {
     private val frameTick = object : Runnable {
         override fun run() {
             if (!saverOn) return
+            if (saverRain.visibility == View.VISIBLE) {
+                saverRain.step(prefs.saverSpeed.value)
+                saverRain.invalidate()
+            }
             val w = saverOverlay.width
             val h = saverOverlay.height
             val dt = 1f / 30f
@@ -188,7 +201,7 @@ class MainActivity : AppCompatActivity() {
         textLogs = findViewById(R.id.textLogs)
         buttonUsb = findViewById(R.id.buttonUsb)
         saverOverlay = findViewById(R.id.saverOverlay)
-        saverLogo = findViewById(R.id.saverLogo)
+        saverRain = findViewById(R.id.saverRain)
         saverClockBlock = findViewById(R.id.saverClockBlock)
         tvSaverClock = findViewById(R.id.tvSaverClock)
         tvSaverDate = findViewById(R.id.tvSaverDate)
