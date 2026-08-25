@@ -81,7 +81,9 @@ class WebcamActivity : ServiceBoundActivity() {
         findViewById<Button>(R.id.buttonOpenStream).setOnClickListener {
             val ip = DiscoveryServiceIp() ?: return@setOnClickListener
             runCatching {
-                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("http://$ip:${prefs.mjpegPort.value}/stream")))
+                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("http://$ip:${prefs.mjpegPort.value}/view")))
+            }.onFailure {
+                Toast.makeText(this, "No browser found", Toast.LENGTH_SHORT).show()
             }
         }
         findViewById<Button>(R.id.buttonCopyUrls).setOnClickListener { copyUrls(prefs) }
@@ -172,7 +174,8 @@ class WebcamActivity : ServiceBoundActivity() {
             append("Viewers: ${cam.bus.subscriberCount}/8 (this page counts as one)\n")
             append("Frames served: ${cam.bus.frameCount}\n")
             val ip = DiscoveryServiceIp() ?: "<phone-ip>"
-            append("Stream: http://$ip:${prefs.mjpegPort.value}/stream\n")
+            append("Viewer (any browser): http://$ip:${prefs.mjpegPort.value}/view\n")
+            append("Stream (VLC etc.): http://$ip:${prefs.mjpegPort.value}/stream\n")
             append("Snapshot: /snapshot.jpg    Status: /status\n")
             append("Tip: lower FPS/quality on weak Wi-Fi. If the phone locks, the camera auto-recovers within ~20 s.")
         }
@@ -180,7 +183,8 @@ class WebcamActivity : ServiceBoundActivity() {
 
     private fun copyUrls(prefs: PreferencesManager) {
         val ip = DiscoveryServiceIp() ?: return
-        val text = "Stream: http://$ip:${prefs.mjpegPort.value}/stream\n" +
+        val text = "Viewer: http://$ip:${prefs.mjpegPort.value}/view\n" +
+            "Stream: http://$ip:${prefs.mjpegPort.value}/stream\n" +
             "Snapshot: http://$ip:${prefs.mjpegPort.value}/snapshot.jpg\n" +
             "Status: http://$ip:${prefs.mjpegPort.value}/status"
         val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager

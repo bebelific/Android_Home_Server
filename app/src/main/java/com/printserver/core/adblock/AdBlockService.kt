@@ -30,6 +30,11 @@ class AdBlockService(
     @Volatile private var server: DnsFilterServer? = null
     private lateinit var listFile: File
 
+    @Volatile var actualPort: Int = 0
+        private set
+    @Volatile var degraded: Boolean = false
+        private set
+
     fun blocklistSize(): Int = blockset.size
     fun stats() = server?.let { Triple(it.total.get(), it.blocked.get(), it.recentBlocked()) }
     fun usingCustomList(): Boolean = listFile.exists() && listFile.length() > 1024
@@ -39,10 +44,31 @@ class AdBlockService(
         return try {
             listFile = File(context.filesDir, "adblock_hosts.txt")
             loadList()
-            server = DnsFilterServer({ prefs.adblockPort.value }, { blockset })
-            server?.start()
+            val want = prefs.adblockPort.value
+            var attempt = want
+            degraded = false
+            try {
+                bindServer(attempt)
+            } catch (first: Exception) {
+                if (attempt == 53 && liftPortRestriction()) {
+                    PrinterLog.i(TAG, "Port restriction lifted via root; retrying 53")
+                    try {
+                        bindServer(53)
+                        attempt = 53
+                    } catch (_: Exception) {
+                        attempt = 5353
+                        degraded = true
+                        bindServer(attempt)
+                    }
+                } else {
+                    attempt = 5353
+                    degraded = true
+                    bindServer(attempt)
+                }
+            }
+            actualPort = attempt
             _state.value = ServiceState.RUNNING
-            PrinterLog.i(TAG, "Running on port ${prefs.adblockPort.value}")
+            PrinterLog.i(TAG, "Running on 0.0.0.0:$actualPort (degraded=$degraded, blocklist=${blockset.size})")
             Result.success(Unit)
         } catch (e: Exception) {
             _state.value = ServiceState.ERROR
@@ -50,6 +76,17 @@ class AdBlockService(
             Result.failure(e)
         }
     }
+
+    private fun bindServer(port: Int) {
+        server?.stop()
+        server = DnsFilterServer({ port }, { blockset })
+        server?.start()
+    }
+
+    private fun liftPortRestriction(): Boolean = runCatching {
+        val p = ProcessBuilder("su", "-c", "echo 0 > /proc/sys/net/ipv4/ip_unprivileged_port_start")
+        p.start().waitFor() == 0
+    }.getOrDefault(false)
 
     override suspend fun stop(): Result<Unit> {
         _state.value = ServiceState.STOPPING

@@ -100,7 +100,6 @@ class MainActivity : AppCompatActivity() {
             val v = CardView(this)
             val serviceId = if (d.id == "media") HomeServerService.ID_FILES else d.id
             v.bind(d) { checked -> bound?.onToggle(serviceId, checked) }
-            if (d.id == "media") v.hideSwitch()
             v.root.setOnClickListener {
                 val target = when (d.id) {
                     HomeServerService.ID_PRINT -> PrintActivity::class.java

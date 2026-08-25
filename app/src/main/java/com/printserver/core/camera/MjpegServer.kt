@@ -34,10 +34,51 @@ class MjpegServer(
     }
 
     private fun handle(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response = when (session.uri) {
-        "/", "/stream", "/video.mjpg" -> streamResponse()
+        "/", "/view" -> viewPage()
+        "/stream", "/video.mjpg" -> streamResponse()
         "/snapshot.jpg" -> snapshot()
         "/status" -> statusJson()
         else -> plain(NanoHTTPD.Response.Status.NOT_FOUND, "not found")
+    }
+
+    private fun viewPage(): NanoHTTPD.Response {
+        val html = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AndroidHomeServer cam</title>
+<style>body{background:#111;color:#eee;font-family:sans-serif;margin:0;text-align:center}
+img{width:100%;max-height:82vh;object-fit:contain;background:#000}
+#st{padding:6px;font-size:13px;color:#9c9}</style></head><body>
+<img id="i" alt="camera"><div id="st">connecting...</div>
+<script>
+var i=document.getElementById('i'),st=document.getElementById('st'),mode='stream',busy=false;
+function poll(){
+  if(busy)return; busy=true;
+  fetch('/snapshot.jpg?'+Date.now()).then(function(r){
+    if(!r.ok)throw 0; return r.blob();
+  }).then(function(b){
+    busy=false;
+    if(i.src)URL.revokeObjectURL(i.src);
+    i.src=URL.createObjectURL(b);
+    st.textContent='live (snapshot mode)';
+    setTimeout(poll,120);
+  }).catch(function(){
+    busy=false;
+    st.textContent='camera offline - retrying...';
+    setTimeout(poll,1000);
+  });
+}
+i.onerror=function(){ if(mode==='stream'){mode='snap';poll();} };
+i.onload=function(){ if(mode==='stream')st.textContent='live (mjpeg)'; };
+i.src='/stream?'+Date.now();
+setTimeout(function(){
+  if(mode==='stream'&&(!i.complete||!i.naturalWidth)){mode='snap';poll();}
+},2500);
+</script></body></html>"""
+        return NanoHTTPD.newFixedLengthResponse(
+            NanoHTTPD.Response.Status.OK,
+            "text/html; charset=utf-8",
+            html
+        )
     }
 
     private fun streamResponse(): NanoHTTPD.Response {

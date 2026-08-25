@@ -64,10 +64,7 @@ class CameraStreamer(private val bus: FrameBus) {
         val id = pickId()
         val info = Camera.CameraInfo()
         Camera.getCameraInfo(id, info)
-        rotationDegrees = if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT)
-            (360 - info.orientation) % 360
-        else
-            info.orientation
+        rotationDegrees = info.orientation
         val p = cam.parameters
         val sizes = p.supportedPreviewSizes.orEmpty()
             .filter { it.width <= MAX_WIDTH && it.height <= MAX_HEIGHT }

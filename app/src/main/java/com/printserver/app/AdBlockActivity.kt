@@ -50,8 +50,11 @@ class AdBlockActivity : ServiceBoundActivity() {
         val prefs = com.printserver.core.common.PreferencesManager(this)
         val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this) ?: "<phone-ip>"
         val stats = svc?.stats()
+        val port = svc?.actualPort?.takeIf { it > 0 } ?: prefs.adblockPort.value
         text.text = buildString {
-            append("Service: ${svc?.state?.value?.name?.lowercase() ?: "off"}   Port: ${prefs.adblockPort.value}\n")
+            append("Service: ${svc?.state?.value?.name?.lowercase() ?: "off"}   Port: $port\n")
+            if (svc?.degraded == true)
+                append("⚠ Android blocks port 53 for apps (needs root). Running on $port instead.\n\n")
             append("Blocklist: ${svc?.blocklistSize() ?: 0} domains ${if (svc?.usingCustomList() == true) "(StevenBlack)" else "(built-in starter)"}\n")
             if (stats != null) {
                 val (total, blocked, recent) = stats
@@ -60,14 +63,19 @@ class AdBlockActivity : ServiceBoundActivity() {
                 if (recent.isNotEmpty()) append("Recent blocks:\n" + recent.take(8).joinToString("\n") { "  ✕ $it" } + "\n")
             }
             append("\nUSE IT (Pi-hole style):\n")
-            append("  1. Router: set DHCP DNS server to $ip\n")
-            append("     (every device on your Wi-Fi is then protected)\n")
-            append("  2. Or per-device: set DNS manually to $ip\n")
-            append("  3. Test: nslookup doubleclick.net $ip  → 0.0.0.0\n")
-            append("\nNotes:\n")
-            append("  • LAN only. Devices must point at this phone — nothing is auto-hijacked.\n")
-            append("  • If the phone sleeps, wake/wifi locks keep DNS alive while the toggle is on.\n")
-            append("  • Update blocklist weekly for fresh ad/tracker domains.")
+            if (port == 53) {
+                append("  1. Router: set DHCP DNS server to $ip\n")
+                append("     (every device on your Wi-Fi is then protected)\n")
+                append("  2. Or per-device: set DNS manually to $ip\n")
+                append("  3. Test: nslookup doubleclick.net $ip  → 0.0.0.0\n")
+            } else {
+                append("  Standard DNS clients use port 53 only, so options are:\n")
+                append("  • Rooted: the app already lifts the port limit when possible\n")
+                append("  • Router with NAT rules: redirect LAN udp/tcp :53 → $ip:$port\n")
+                append("  • Apps with custom-port DNS (RethinkDNS, Intra, some clients): use $ip:$port\n")
+                append("  • Test: nslookup -port=$port doubleclick.net $ip\n")
+            }
+            append("\nLAN only. Devices must point at this phone — nothing is auto-hijacked.")
         }
     }
 }
