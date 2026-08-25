@@ -32,8 +32,13 @@ object PrefKeys {
     const val ADBLOCK_ENABLED = "adblock_enabled"
     const val ADBLOCK_PORT = "adblock_port"
     const val BACKUP_USE_USB = "backup_use_usb"
+    const val BACKUP_LOCAL = "backup_local"
     const val NET_WATCH_ENABLED = "net_watch_enabled"
     const val DISPLAY_KEEP_ON = "display_keep_on"
+    const val SAVER_SHOW_LOGO = "saver_show_logo"
+    const val SAVER_SHOW_CLOCK = "saver_show_clock"
+    const val SAVER_SHOW_STATUS = "saver_show_status"
+    const val SAVER_SPEED = "saver_speed"
     const val PC_ENABLED = "pc_enabled"
     const val PC_DEVICES = "pc_devices"
     const val PC_BLOCK_ADULT = "pc_block_adult"
@@ -78,8 +83,13 @@ class PreferencesManager(context: Context) {
     private val _adblockEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.ADBLOCK_ENABLED, false))
     private val _adblockPort = MutableStateFlow(prefs.getInt(PrefKeys.ADBLOCK_PORT, 53))
     private val _backupUseUsb = MutableStateFlow(prefs.getBoolean(PrefKeys.BACKUP_USE_USB, false))
+    private val _backupLocal = MutableStateFlow(prefs.getBoolean(PrefKeys.BACKUP_LOCAL, true))
     private val _netWatchEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.NET_WATCH_ENABLED, false))
     private val _displayKeepOn = MutableStateFlow(prefs.getBoolean(PrefKeys.DISPLAY_KEEP_ON, false))
+    private val _saverShowLogo = MutableStateFlow(prefs.getBoolean(PrefKeys.SAVER_SHOW_LOGO, true))
+    private val _saverShowClock = MutableStateFlow(prefs.getBoolean(PrefKeys.SAVER_SHOW_CLOCK, true))
+    private val _saverShowStatus = MutableStateFlow(prefs.getBoolean(PrefKeys.SAVER_SHOW_STATUS, true))
+    private val _saverSpeed = MutableStateFlow(prefs.getInt(PrefKeys.SAVER_SPEED, 1))
     private val _pcEnabled = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_ENABLED, false))
     private val _pcDevices = MutableStateFlow(prefs.getString(PrefKeys.PC_DEVICES, "") ?: "")
     private val _pcBlockAdult = MutableStateFlow(prefs.getBoolean(PrefKeys.PC_BLOCK_ADULT, true))
@@ -119,8 +129,13 @@ class PreferencesManager(context: Context) {
     val adblockEnabled: StateFlow<Boolean> = _adblockEnabled.asStateFlow()
     val adblockPort: StateFlow<Int> = _adblockPort.asStateFlow()
     val backupUseUsb: StateFlow<Boolean> = _backupUseUsb.asStateFlow()
+    val backupLocal: StateFlow<Boolean> = _backupLocal.asStateFlow()
     val netWatchEnabled: StateFlow<Boolean> = _netWatchEnabled.asStateFlow()
     val displayKeepOn: StateFlow<Boolean> = _displayKeepOn.asStateFlow()
+    val saverShowLogo: StateFlow<Boolean> = _saverShowLogo.asStateFlow()
+    val saverShowClock: StateFlow<Boolean> = _saverShowClock.asStateFlow()
+    val saverShowStatus: StateFlow<Boolean> = _saverShowStatus.asStateFlow()
+    val saverSpeed: StateFlow<Int> = _saverSpeed.asStateFlow()
     val pcEnabled: StateFlow<Boolean> = _pcEnabled.asStateFlow()
     val pcDevices: StateFlow<String> = _pcDevices.asStateFlow()
     val pcBlockAdult: StateFlow<Boolean> = _pcBlockAdult.asStateFlow()
@@ -164,8 +179,13 @@ class PreferencesManager(context: Context) {
     fun setAdblockEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.ADBLOCK_ENABLED, v).apply(); _adblockEnabled.value = v }
     fun setAdblockPort(v: Int) { val c = v.coerceIn(53, 65535); prefs.edit().putInt(PrefKeys.ADBLOCK_PORT, c).apply(); _adblockPort.value = c }
     fun setBackupUseUsb(v: Boolean) { prefs.edit().putBoolean(PrefKeys.BACKUP_USE_USB, v).apply(); _backupUseUsb.value = v }
+    fun setBackupLocal(v: Boolean) { prefs.edit().putBoolean(PrefKeys.BACKUP_LOCAL, v).apply(); _backupLocal.value = v }
     fun setNetWatchEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.NET_WATCH_ENABLED, v).apply(); _netWatchEnabled.value = v }
     fun setDisplayKeepOn(v: Boolean) { prefs.edit().putBoolean(PrefKeys.DISPLAY_KEEP_ON, v).apply(); _displayKeepOn.value = v }
+    fun setSaverShowLogo(v: Boolean) { prefs.edit().putBoolean(PrefKeys.SAVER_SHOW_LOGO, v).apply(); _saverShowLogo.value = v }
+    fun setSaverShowClock(v: Boolean) { prefs.edit().putBoolean(PrefKeys.SAVER_SHOW_CLOCK, v).apply(); _saverShowClock.value = v }
+    fun setSaverShowStatus(v: Boolean) { prefs.edit().putBoolean(PrefKeys.SAVER_SHOW_STATUS, v).apply(); _saverShowStatus.value = v }
+    fun setSaverSpeed(v: Int) { val c = v.coerceIn(0, 2); prefs.edit().putInt(PrefKeys.SAVER_SPEED, c).apply(); _saverSpeed.value = c }
     fun setPcEnabled(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_ENABLED, v).apply(); _pcEnabled.value = v }
     fun setPcDevices(v: String) { prefs.edit().putString(PrefKeys.PC_DEVICES, v).apply(); _pcDevices.value = v }
     fun setPcBlockAdult(v: Boolean) { prefs.edit().putBoolean(PrefKeys.PC_BLOCK_ADULT, v).apply(); _pcBlockAdult.value = v }

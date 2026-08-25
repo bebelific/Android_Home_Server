@@ -14,8 +14,10 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -29,6 +31,7 @@ import com.printserver.core.print.PrintService
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
@@ -46,7 +49,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textLogs: TextView
     private lateinit var buttonUsb: Button
     private lateinit var saverOverlay: View
-    private lateinit var saverContent: View
+    private lateinit var saverLogo: ImageView
+    private lateinit var saverClockBlock: View
     private lateinit var tvSaverClock: TextView
     private lateinit var tvSaverDate: TextView
     private lateinit var tvSaverStatus: TextView
@@ -58,15 +62,11 @@ class MainActivity : AppCompatActivity() {
         override fun run() { refresh(); handler.postDelayed(this, 1000) }
     }
     private val idleRunnable = Runnable { showSaver() }
-    private val saverTick = object : Runnable {
-        override fun run() {
-            if (!saverOn) return
-            updateSaverContent()
-            handler.postDelayed(this, 1000)
-        }
-    }
+
+    private class Floater(val view: View, var vx: Float, var vy: Float)
+    private val floaters = mutableListOf<Floater>()
     private var saverOn = false
-    private var saverShifts = 0
+    private var lastStatusText = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,38 +104,78 @@ class MainActivity : AppCompatActivity() {
     private fun showSaver() {
         saverOn = true
         saverOverlay.visibility = View.VISIBLE
-        saverShifts = 0
-        updateSaverContent()
-        handler.post(saverTick)
+        saverLogo.visibility = if (prefs.saverShowLogo.value) View.VISIBLE else View.GONE
+        saverClockBlock.visibility = if (prefs.saverShowClock.value) View.VISIBLE else View.GONE
+        tvSaverStatus.visibility = if (prefs.saverShowStatus.value) View.VISIBLE else View.GONE
+        floaters.clear()
+        saverOverlay.post {
+            val w = saverOverlay.width
+            val h = saverOverlay.height
+            if (w <= 0 || h <= 0) return@post
+            val base = floatSpeedDp()
+            for (f in listOf(saverLogo, saverClockBlock, tvSaverStatus)) {
+                if (f.visibility != View.VISIBLE) continue
+                f.translationX = (0..(w - f.width).coerceAtLeast(0)).random().toFloat()
+                f.translationY = (0..(h - f.height).coerceAtLeast(0)).random().toFloat()
+                val angle = Math.toRadians((0..359).random().toDouble())
+                val jitter = 0.85 + Math.random() * 0.3
+                floaters.add(Floater(f, (base * jitter * Math.cos(angle)).toFloat(), (base * jitter * Math.sin(angle)).toFloat()))
+            }
+            handler.post(frameTick)
+        }
     }
 
-    private fun hideSaver() {
-        saverOn = false
-        saverOverlay.visibility = View.GONE
-        handler.removeCallbacks(saverTick)
-        saverContent.translationX = 0f
-        saverContent.translationY = 0f
-        resetIdle()
+    private fun floatSpeedDp(): Float = when (prefs.saverSpeed.value) {
+        0 -> 14f; 2 -> 55f; else -> 30f
     }
 
-    private fun updateSaverContent() {
+    private val frameTick = object : Runnable {
+        override fun run() {
+            if (!saverOn) return
+            val w = saverOverlay.width
+            val h = saverOverlay.height
+            val dt = 1f / 30f
+            for (f in floaters) {
+                var x = f.view.translationX + f.vx * dt * resources.displayMetrics.density
+                var y = f.view.translationY + f.vy * dt * resources.displayMetrics.density
+                val fw = f.view.width.coerceAtLeast(1)
+                val fh = f.view.height.coerceAtLeast(1)
+                if (x < 0) { x = 0f; f.vx = abs(f.vx) }
+                if (x + fw > w) { x = (w - fw).toFloat(); f.vx = -abs(f.vx) }
+                if (y < 0) { y = 0f; f.vy = abs(f.vy) }
+                if (y + fh > h) { y = (h - fh).toFloat(); f.vy = -abs(f.vy) }
+                f.view.translationX = x
+                f.view.translationY = y
+            }
+            val now = System.currentTimeMillis()
+            if (now - lastStatusText > 1000) {
+                lastStatusText = now
+                updateSaverStatusText()
+            }
+            handler.postDelayed(this, 33)
+        }
+    }
+
+    private fun updateSaverStatusText() {
         val now = System.currentTimeMillis()
         tvSaverClock.text = SimpleDateFormat("HH:mm", Locale.US).format(Date(now))
         tvSaverDate.text = SimpleDateFormat("EEE · d MMM", Locale.US).format(Date(now))
-        val running = bound?.services()?.allServices?.count {
-            it.state.value == ServiceState.RUNNING
-        } ?: 0
+        val running = bound?.services()?.allServices?.count { it.state.value == ServiceState.RUNNING } ?: 0
         val net = when (InternetWatchdog.status) {
             InternetWatchdog.Status.ONLINE -> "online"
             InternetWatchdog.Status.OFFLINE -> "offline"
             else -> "—"
         }
-        tvSaverStatus.text = "$running services · internet $net"
-        saverShifts++
-        if (saverShifts % 45 == 0) {
-            saverContent.translationX = (-(24..24).random() + (0..48).random()).toFloat() * resources.displayMetrics.density / 2
-            saverContent.translationY = (-(24..24).random()).toFloat() * resources.displayMetrics.density / 2
-        }
+        val batt = batteryLine()?.replace("Battery: ", "") ?: ""
+        tvSaverStatus.text = "$running services · net $net · $batt"
+    }
+
+    private fun hideSaver() {
+        saverOn = false
+        saverOverlay.visibility = View.GONE
+        handler.removeCallbacks(frameTick)
+        floaters.clear()
+        resetIdle()
     }
 
     private fun bindViews() {
@@ -148,7 +188,8 @@ class MainActivity : AppCompatActivity() {
         textLogs = findViewById(R.id.textLogs)
         buttonUsb = findViewById(R.id.buttonUsb)
         saverOverlay = findViewById(R.id.saverOverlay)
-        saverContent = findViewById(R.id.saverContent)
+        saverLogo = findViewById(R.id.saverLogo)
+        saverClockBlock = findViewById(R.id.saverClockBlock)
         tvSaverClock = findViewById(R.id.tvSaverClock)
         tvSaverDate = findViewById(R.id.tvSaverDate)
         tvSaverStatus = findViewById(R.id.tvSaverStatus)
@@ -156,9 +197,7 @@ class MainActivity : AppCompatActivity() {
         textStatus.setBackgroundResource(R.drawable.bg_pill)
 
         buttonUsb.setOnClickListener {
-            bound?.printService()?.requestUsbPermission {
-                runOnUiThread { refresh() }
-            }
+            bound?.printService()?.requestUsbPermission { runOnUiThread { refresh() } }
         }
         findViewById<Button>(R.id.buttonLogs).setOnClickListener { startActivity(Intent(this, LogActivity::class.java)) }
         findViewById<Button>(R.id.buttonSettings).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
@@ -167,19 +206,17 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.buttonSaver).setOnClickListener { showSaver() }
     }
 
-    private fun printServiceOf(): PrintService? = bound?.printService()
-
     private fun buildCards() {
-        val container = findViewById<LinearLayout>(R.id.serviceCardsContainer)
+        val grid = findViewById<GridLayout>(R.id.serviceCardsContainer)
         val defs = listOf(
-            Card(HomeServerService.ID_PRINT, "Print Server", "Raw 9100 -> USB printer", R.drawable.ic_print),
-            Card(HomeServerService.ID_FILES, "File Sharing", "WebDAV + FTP + browser", R.drawable.ic_folder),
-            Card("media", "Media Server", "Stream videos & music", R.drawable.ic_media),
-            Card(HomeServerService.ID_BACKUP, "Photo Backup", "DCIM → share + Drive + USB", R.drawable.ic_backup),
-            Card(HomeServerService.ID_WEBCAM, "Webcam", "MJPEG stream + snapshots", R.drawable.ic_camera),
-            Card(HomeServerService.ID_ADBLOCK, "Ad Block DNS", "Pi-hole-style filter", R.drawable.ic_shield),
-            Card("parental", "Parental Controls", "Kids filter + bedtime", R.drawable.ic_parent),
-            Card(HomeServerService.ID_DISCOVERY, "Discovery", "mDNS/Bonjour advertise", R.drawable.ic_discovery),
+            Card(HomeServerService.ID_PRINT, "Print Server", "Raw 9100 → USB", R.drawable.ic_print),
+            Card(HomeServerService.ID_FILES, "File Sharing", "WebDAV + FTP", R.drawable.ic_folder),
+            Card("media", "Media Server", "Stream + seek", R.drawable.ic_media),
+            Card(HomeServerService.ID_BACKUP, "Photo Backup", "Share + Drive + USB", R.drawable.ic_backup),
+            Card(HomeServerService.ID_WEBCAM, "Webcam", "MJPEG + snapshots", R.drawable.ic_camera),
+            Card(HomeServerService.ID_ADBLOCK, "Ad Block DNS", "Pi-hole style", R.drawable.ic_shield),
+            Card("parental", "Parental", "Kids filter + bedtime", R.drawable.ic_parent),
+            Card(HomeServerService.ID_DISCOVERY, "Discovery", "mDNS adverts", R.drawable.ic_discovery),
         )
         for (d in defs) {
             val v = CardView(this)
@@ -204,7 +241,15 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (target != null) startActivity(Intent(this, target))
             }
-            container.addView(v.root)
+            val lp = GridLayout.LayoutParams().apply {
+                rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+                width = 0
+                height = GridLayout.LayoutParams.WRAP_CONTENT
+                setMargins(dp(3), dp(3), dp(3), dp(6))
+            }
+            v.root.layoutParams = lp
+            grid.addView(v.root)
             cards[d.id] = v to d
         }
     }
@@ -265,24 +310,23 @@ class MainActivity : AppCompatActivity() {
 
         val ip = com.printserver.core.discovery.DiscoveryService.localWifiIp(this)
         val ports = bound?.portSummary().orEmpty()
-        val netLine = when {
+        textNetwork.text = when {
             !prefs.netWatchEnabled.value -> "Internet: not monitored (enable in Settings)"
             InternetWatchdog.status == InternetWatchdog.Status.ONLINE -> "Internet: ONLINE"
             InternetWatchdog.status == InternetWatchdog.Status.OFFLINE ->
                 "Internet: DOWN — tap the alert to share this phone's data via hotspot"
             else -> "Internet: checking…"
         }
-        textNetwork.text = netLine
         textAddresses.text = (ip ?: "no Wi-Fi") + ports
 
         buttonUsb.visibility =
-            if (printServiceOf()?.needsUsbPermission() == true) View.VISIBLE else View.GONE
+            if (bound?.printService()?.needsUsbPermission() == true) View.VISIBLE else View.GONE
         textError.visibility = View.GONE
         textLogs.text = bound?.logTail().orEmpty()
 
         batteryLine()?.let { textPower.text = it }
         textUptime.text = uptimeLine()
-        if (saverOn) updateSaverContent()
+        if (saverOn) updateSaverStatusText()
     }
 
     private fun batteryLine(): String? {
@@ -312,41 +356,52 @@ class MainActivity : AppCompatActivity() {
 
     private inner class CardView(ctx: Context) {
         val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             setBackgroundResource(R.drawable.bg_card)
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(10) }
-            layoutParams = lp
+        }
+        private val row1 = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
         private val dot = View(ctx).apply {
-            val lp = LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginEnd = dp(12) }
+            val lp = LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginEnd = dp(8) }
             layoutParams = lp
             background = ContextCompat.getDrawable(ctx, R.drawable.bg_dot)
-            imageTint()
-        }
-        private fun imageTint() {}
-        private val icon = ImageView(ctx).apply {
-            val lp = LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) }
-            layoutParams = lp
-        }
-        private val texts = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         private val title = TextView(ctx).apply {
-            textSize = 15f
+            textSize = 13f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(Color.parseColor("#E6E9EE"))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
         }
-        private val sub = TextView(ctx).apply { textSize = 12f; setTextColor(Color.parseColor("#9AA3AF")) }
         private val sw = SwitchCompat(ctx)
+        private val row2 = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = dp(6)
+            layoutParams = lp
+        }
+        private val icon = ImageView(ctx).apply {
+            val lp = LinearLayout.LayoutParams(dp(14), dp(14)).apply { marginEnd = dp(6) }
+            layoutParams = lp
+            imageTintList = ColorStateList.valueOf(Color.parseColor("#5B6673"))
+        }
+        private val sub = TextView(ctx).apply {
+            textSize = 10f
+            setTextColor(Color.parseColor("#9AA3AF"))
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
 
         init {
-            texts.addView(title); texts.addView(sub)
-            root.addView(dot); root.addView(icon); root.addView(texts); root.addView(sw)
+            row1.addView(dot); row1.addView(title); row1.addView(sw)
+            row2.addView(icon); row2.addView(sub)
+            root.addView(row1); root.addView(row2)
         }
 
         @Volatile private var suppressCallbacks = false

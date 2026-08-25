@@ -64,6 +64,29 @@ class SettingsActivity : AppCompatActivity() {
         keepScreen.isChecked = prefs.displayKeepOn.value
         keepScreen.setOnCheckedChangeListener { _, c -> prefs.setDisplayKeepOn(c) }
 
+        val swLogo = findViewById<Switch>(R.id.swSaverLogo)
+        swLogo.isChecked = prefs.saverShowLogo.value
+        swLogo.setOnCheckedChangeListener { _, c -> prefs.setSaverShowLogo(c) }
+        val swClock = findViewById<Switch>(R.id.swSaverClock)
+        swClock.isChecked = prefs.saverShowClock.value
+        swClock.setOnCheckedChangeListener { _, c -> prefs.setSaverShowClock(c) }
+        val swStatus = findViewById<Switch>(R.id.swSaverStatus)
+        swStatus.isChecked = prefs.saverShowStatus.value
+        swStatus.setOnCheckedChangeListener { _, c -> prefs.setSaverShowStatus(c) }
+
+        val speedBar = findViewById<SeekBar>(R.id.sbSaverSpeed)
+        val speedLabel = findViewById<TextView>(R.id.tvSaverSpeed)
+        val names = arrayOf("slow", "normal", "fast")
+        speedBar.progress = prefs.saverSpeed.value
+        speedLabel.text = "Drift speed: ${names[prefs.saverSpeed.value]}"
+        speedBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
+                if (fromUser) { prefs.setSaverSpeed(p); speedLabel.text = "Drift speed: ${names[p]}" }
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+
         val user = findViewById<EditText>(R.id.etUsername)
         val pass = findViewById<EditText>(R.id.etPassword)
         user.setText(prefs.username.value)
