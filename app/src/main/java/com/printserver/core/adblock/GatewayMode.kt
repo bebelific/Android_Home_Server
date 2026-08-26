@@ -61,8 +61,12 @@ object GatewayMode {
         return Result.success(lastStatus)
     }
 
+    private fun validIp(ip: String): Boolean = runCatching {
+        java.net.InetAddress.getByName(ip).hostAddress == ip
+    }.getOrDefault(false)
+
     private fun syncForwardRules(context: Context, prefs: PreferencesManager) {
-        val kids = com.printserver.core.adblock.ParentalControl.devices(prefs)
+        val kids = com.printserver.core.adblock.ParentalControl.devices(prefs).filter { validIp(it) }
         val hardBlock = prefs.pcEnabled.value && (
             com.printserver.core.adblock.ParentalControl.inScheduleWindow(prefs) ||
                 prefs.pcPauseUntil.value > System.currentTimeMillis()

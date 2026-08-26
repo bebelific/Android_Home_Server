@@ -52,14 +52,22 @@ class MjpegServer(
     }
 
     private fun checkAuth(session: NanoHTTPD.IHTTPSession): Boolean {
-        val header = session.headers["authorization"] ?: return false
+        val clientIp = session.remoteIpAddress ?: "unknown"
+        if (com.printserver.core.common.AuthRateLimiter.isBlocked(clientIp)) return false
+        val header = session.headers["authorization"] ?: run {
+            com.printserver.core.common.AuthRateLimiter.recordFailure(clientIp)
+            return false
+        }
         if (!header.startsWith("Basic ", true)) return false
-        return try {
+        val result = try {
             val decoded = String(android.util.Base64.decode(header.substring(6).trim(), android.util.Base64.NO_WRAP), Charsets.UTF_8)
             decoded.substringBefore(':') == username() &&
                 com.printserver.core.common.PreferencesManager.sha256(decoded.substringAfter(':', ""))
                     .equals(passwordHash(), ignoreCase = true)
         } catch (_: Exception) { false }
+        if (result) com.printserver.core.common.AuthRateLimiter.recordSuccess(clientIp)
+        else com.printserver.core.common.AuthRateLimiter.recordFailure(clientIp)
+        return result
     }
 
     private fun viewPage(): NanoHTTPD.Response {

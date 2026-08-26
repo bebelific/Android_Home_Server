@@ -192,7 +192,7 @@ class PreferencesManager(context: Context) {
     fun setPasswordHash(v: String) { prefs.edit().putString(PrefKeys.PASSWORD_HASH, v).apply(); _passwordHash.value = v }
     fun setCredentials(u: String, passPlain: String) {
         setUsername(u)
-        setPasswordHash(if (passPlain.isBlank()) "" else sha256(passPlain))
+        setPasswordHash(if (passPlain.isBlank()) "" else sha256("$u:$passPlain"))
     }
 
     fun setShareRoot(v: String) { prefs.edit().putString(PrefKeys.SHARE_ROOT, v).apply(); _shareRoot.value = v }

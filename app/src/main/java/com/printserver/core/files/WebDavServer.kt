@@ -65,14 +65,22 @@ class WebDavServer(
     private fun checkAuth(session: NanoHTTPD.IHTTPSession): Boolean {
         val hash = passwordHash()
         if (hash.isBlank()) return true
-        val header = session.headers["authorization"] ?: return false
+        val clientIp = (session.remoteIpAddress ?: "unknown")
+        if (com.printserver.core.common.AuthRateLimiter.isBlocked(clientIp)) return false
+        val header = session.headers["authorization"] ?: run {
+            com.printserver.core.common.AuthRateLimiter.recordFailure(clientIp)
+            return false
+        }
         if (!header.startsWith("Basic ", true)) return false
-        return try {
+        val result = try {
             val decoded = String(Base64.decode(header.substring(6).trim(), Base64.NO_WRAP), Charsets.UTF_8)
             val user = decoded.substringBefore(':')
             val pass = decoded.substringAfter(':', "")
             user == username() && PreferencesManager.sha256(pass).equals(hash, ignoreCase = true)
         } catch (_: Exception) { false }
+        if (result) com.printserver.core.common.AuthRateLimiter.recordSuccess(clientIp)
+        else com.printserver.core.common.AuthRateLimiter.recordFailure(clientIp)
+        return result
     }
 
     private fun options(): NanoHTTPD.Response =
